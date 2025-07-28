@@ -4,6 +4,10 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
+import { Button } from './ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from './ui/dropdown-menu';
+import { Code2 } from 'lucide-react';
+import { useToast } from './ui/use-toast';
 import '@xterm/xterm/css/xterm.css';
 
 interface ClaudeTerminalProps {
@@ -21,6 +25,8 @@ export function ClaudeTerminal({ worktreePath }: ClaudeTerminalProps) {
   const fitAddonRef = useRef<FitAddon | null>(null);
   const serializeAddonRef = useRef<SerializeAddon | null>(null);
   const removeListenersRef = useRef<Array<() => void>>([]);
+  const [detectedIDEs, setDetectedIDEs] = useState<Array<{ name: string; command: string }>>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -262,6 +268,11 @@ export function ClaudeTerminal({ worktreePath }: ClaudeTerminalProps) {
     };
   }, [terminal, worktreePath]);
 
+  // Detect available IDEs
+  useEffect(() => {
+    window.electronAPI.ide.detect().then(setDetectedIDEs);
+  }, []);
+
   // Update theme
   useEffect(() => {
     if (!terminal) return;
@@ -285,13 +296,62 @@ export function ClaudeTerminal({ worktreePath }: ClaudeTerminalProps) {
     window.electronAPI.theme.onChange(updateTheme);
   }, [terminal]);
 
+  const handleOpenInIDE = async (ideName: string) => {
+    try {
+      const result = await window.electronAPI.ide.open(ideName, worktreePath);
+      if (!result.success) {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to open IDE",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to open IDE",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col h-full">
-      <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
-        <div>
+      <div className="h-[57px] px-4 border-b flex items-center justify-between flex-shrink-0">
+        <div className="min-w-0 flex-1">
           <h3 className="font-semibold">Terminal</h3>
-          <p className="text-xs text-muted-foreground">{worktreePath}</p>
+          <p className="text-xs text-muted-foreground truncate">{worktreePath}</p>
         </div>
+        {detectedIDEs.length > 0 && (
+          detectedIDEs.length === 1 ? (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => handleOpenInIDE(detectedIDEs[0].name)}
+              title={`Open in ${detectedIDEs[0].name}`}
+            >
+              <Code2 className="h-4 w-4" />
+            </Button>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost">
+                  <Code2 className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {detectedIDEs.map((ide) => (
+                  <DropdownMenuItem
+                    key={ide.name}
+                    onClick={() => handleOpenInIDE(ide.name)}
+                  >
+                    Open in {ide.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
+        )}
       </div>
 
       <div 

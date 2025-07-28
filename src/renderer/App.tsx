@@ -67,13 +67,13 @@ function AppContent() {
           onValueChange={setActiveProject}
           className="flex-1 flex flex-col"
         >
-          <div className="border-b px-4 flex items-center gap-2 bg-muted/50">
-            <TabsList className="h-12 bg-transparent p-0 rounded-none">
+          <div className="border-b flex items-center gap-2 bg-muted/50 h-10">
+            <TabsList className="h-full bg-transparent p-0 rounded-none">
               {projects.map((project) => (
                 <TabsTrigger
                   key={project.id}
                   value={project.id}
-                  className="relative pr-8 data-[state=active]:bg-background data-[state=active]:rounded-t-md data-[state=active]:border-t data-[state=active]:border-x data-[state=active]:border-b-0"
+                  className="relative pr-8 h-full data-[state=active]:bg-background data-[state=active]:rounded-t-md data-[state=active]:border-t data-[state=active]:border-x data-[state=active]:border-b-0"
                 >
                   {project.name}
                   <span
