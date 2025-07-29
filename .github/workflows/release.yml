@@ -35,6 +35,9 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+      
+      - name: Clean npm cache
+        run: npm cache clean --force
 
       - name: Install setuptools for Python (macOS)
         if: matrix.os == 'macos-latest'
@@ -49,10 +52,8 @@ jobs:
         timeout-minutes: 10
 
       - name: Rebuild native dependencies
-        if: matrix.os == 'windows-latest'
         run: |
-          npm install -g @electron/rebuild
-          electron-rebuild
+          npx electron-rebuild
         shell: bash
 
       - name: Build executables
