@@ -15,6 +15,14 @@
 
 VibeTree is a desktop application that enhances your development workflow by enabling parallel development with AI assistance across multiple git worktrees. Work on features simultaneously without context switching.
 
+## Screenshot
+
+![VibeTree Screenshot](assets/screenshot.png)
+
+## Demo
+
+[View Demo Video](assets/demo.mov)
+
 ## Getting Started
 
 ```bash
