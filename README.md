@@ -31,64 +31,20 @@ npm run build
 npm run package
 ```
 
-## ✨ Features
+## Features
 
-### 🌳 Git Worktree Management
 - **Parallel Development** - Work on multiple features simultaneously without stashing or switching branches
-- **Quick Branch Creation** - Create new feature branches as isolated worktrees with a single click
-- **Visual Worktree Overview** - See all your worktrees at a glance with branch names and paths
-
-### 💻 Integrated Terminal
-- **Persistent Sessions** - Each worktree maintains its own terminal session
-- **State Preservation** - Terminal history and output preserved when switching between worktrees
-- **Full PTY Support** - Powered by node-pty for proper terminal emulation
+- **Persistent Terminal Sessions** - Each worktree maintains its own terminal session with full state preservation
 - **Claude CLI Integration** - Seamlessly work with Claude in each terminal
-
-### 🎨 Modern UI/UX
-- **Monochrome Design** - Clean, distraction-free interface
+- **IDE Integration** - Open any worktree directly in VS Code or Cursor
+- **Multi-Project Support** - Work with multiple repositories in tabbed interface
 - **Dark/Light Mode** - Automatic OS theme detection with manual toggle
-- **Multi-Project Tabs** - Work with multiple repositories in tabbed interface
-- **Responsive Layout** - Optimized for productivity with resizable panels
-
-### 🔧 Developer Experience
-- **IDE Integration** - Quick open in VS Code or Cursor from any worktree
-- **One-Click IDE Launch** - Open any worktree directly in your preferred IDE
 - **macOS Native** - Proper traffic light window controls integration
-- **Fast & Lightweight** - Built with Electron + Vite for optimal performance
 
-## 🛠️ Tech Stack
+## Contributing
 
-| Technology | Purpose |
-|------------|---------|
-| **Electron** | Cross-platform desktop framework |
-| **React** | UI framework |
-| **TypeScript** | Type safety and better DX |
-| **Tailwind CSS** | Utility-first styling |
-| **shadcn/ui** | Beautiful, accessible components |
-| **Radix UI** | Unstyled, accessible primitives |
-| **xterm.js** | Terminal emulation |
-| **node-pty** | Pseudo-terminal support |
-| **Vite** | Fast build tooling |
+Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
-## 📦 Project Structure
-
-```
-vibetree/
-├── src/
-│   ├── main/          # Electron main process
-│   ├── preload/       # Preload scripts
-│   └── renderer/      # React application
-│       ├── components/
-│       ├── contexts/
-│       └── styles/
-├── assets/            # Icons and images
-└── dist/              # Build output
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
+## License
 
 MIT License - see the LICENSE file for details.
