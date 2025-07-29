@@ -1,6 +1,6 @@
 {
   "name": "vibetree",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Vibe code with AI in parallel git worktrees",
   "main": "dist/main/index.js",
   "scripts": {
