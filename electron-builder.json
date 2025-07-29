@@ -6,21 +6,58 @@
   },
   "files": [
     "dist/**/*",
-    "package.json"
+    "package.json",
+    "assets/icons/**/*"
   ],
   "mac": {
     "category": "public.app-category.developer-tools",
     "hardenedRuntime": true,
     "gatekeeperAssess": false,
-    "icon": "assets/icons/VibeTree.png"
+    "icon": "assets/icons/VibeTree.png",
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["x64", "arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64", "arm64"]
+      }
+    ]
+  },
+  "dmg": {
+    "artifactName": "${productName}-${version}-${arch}.${ext}"
   },
   "win": {
-    "target": "nsis",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
     "icon": "assets/icons/VibeTree.png"
   },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "artifactName": "${productName}-${version}-Setup.${ext}"
+  },
   "linux": {
-    "target": "AppImage",
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64"]
+      },
+      {
+        "target": "deb",
+        "arch": ["x64"]
+      }
+    ],
     "category": "Development",
-    "icon": "assets/icons/VibeTree.png"
+    "icon": "assets/icons/VibeTree.png",
+    "maintainer": "VibeTree Contributors"
+  },
+  "appImage": {
+    "artifactName": "${productName}-${version}.${ext}"
   }
 }

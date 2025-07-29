@@ -9,6 +9,7 @@
   [![Electron](https://img.shields.io/badge/Electron-28.1.3-47848F?logo=electron)](https://www.electronjs.org/)
   [![React](https://img.shields.io/badge/React-18.2.0-61DAFB?logo=react)](https://reactjs.org/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+  [![Release](https://img.shields.io/github/v/release/sahithvibudhi/vibe-tree)](https://github.com/sahithvibudhi/vibe-tree/releases)
 </div>
 
 ---
@@ -23,7 +24,17 @@ VibeTree is a desktop application that enhances your development workflow by ena
 
 [View Demo Video](assets/demo.mov)
 
-## Getting Started
+## Installation
+
+### Download Pre-built Binaries
+
+Download the latest release for your platform from the [Releases page](https://github.com/sahithvibudhi/vibe-tree/releases):
+
+- **macOS**: Download `.dmg` file (supports both Intel and Apple Silicon)
+- **Windows**: Download `.exe` installer
+- **Linux**: Download `.AppImage` or `.deb` file
+
+### Build from Source
 
 ```bash
 # Install dependencies
