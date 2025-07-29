@@ -58,8 +58,6 @@ jobs:
 
       - name: Build executables
         run: npm run package
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         timeout-minutes: 20
 
       - name: Upload artifacts
