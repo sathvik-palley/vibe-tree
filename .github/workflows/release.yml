@@ -74,7 +74,7 @@ jobs:
             mac-executables/*
             linux-executables/*
             win-executables/*
-          draft: false
+          draft: true
           prerelease: false
           generate_release_notes: true
         env:
