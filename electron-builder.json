@@ -12,15 +12,15 @@
     "category": "public.app-category.developer-tools",
     "hardenedRuntime": true,
     "gatekeeperAssess": false,
-    "icon": "assets/icon.icns"
+    "icon": "assets/icons/VibeTree.png"
   },
   "win": {
     "target": "nsis",
-    "icon": "assets/icon.ico"
+    "icon": "assets/icons/VibeTree.png"
   },
   "linux": {
     "target": "AppImage",
     "category": "Development",
-    "icon": "assets/icon.png"
+    "icon": "assets/icons/VibeTree.png"
   }
 }
