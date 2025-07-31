@@ -57,6 +57,11 @@ npm run package
 - **Dark/Light Mode** - Automatic OS theme detection with manual toggle
 - **macOS Native** - Proper traffic light window controls integration
 
+## Roadmap
+
+- [ ] Claude notifications - Get notified when Claude finishes tasks or needs user input
+- [ ] Mobile access - Access Claude Code from your phone
+
 ## Contributing
 
 Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
