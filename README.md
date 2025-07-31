@@ -19,7 +19,7 @@ VibeTree is a desktop application that enhances your development workflow by ena
 
 ## Demo
 
-[View Demo Video](assets/demo.mov)
+![VibeTree Demo](assets/demo.gif)
 
 ## Installation
 
