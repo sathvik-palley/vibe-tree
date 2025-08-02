@@ -84,6 +84,98 @@ ipcMain.handle('git:worktree-list', async (_, projectPath: string) => {
   });
 });
 
+// Git diff and status operations
+ipcMain.handle('git:status', async (_, worktreePath: string) => {
+  return new Promise((resolve, reject) => {
+    const child = spawn('git', ['status', '--porcelain=v1'], {
+      cwd: worktreePath
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve(parseGitStatus(stdout));
+      } else {
+        reject(new Error(stderr || 'Failed to get git status'));
+      }
+    });
+  });
+});
+
+ipcMain.handle('git:diff', async (_, worktreePath: string, filePath?: string) => {
+  return new Promise((resolve, reject) => {
+    const args = ['diff'];
+    if (filePath) {
+      args.push(filePath);
+    }
+
+    const child = spawn('git', args, {
+      cwd: worktreePath
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve(stdout);
+      } else {
+        reject(new Error(stderr || 'Failed to get git diff'));
+      }
+    });
+  });
+});
+
+ipcMain.handle('git:diff-staged', async (_, worktreePath: string, filePath?: string) => {
+  return new Promise((resolve, reject) => {
+    const args = ['diff', '--staged'];
+    if (filePath) {
+      args.push(filePath);
+    }
+
+    const child = spawn('git', args, {
+      cwd: worktreePath
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve(stdout);
+      } else {
+        reject(new Error(stderr || 'Failed to get staged git diff'));
+      }
+    });
+  });
+});
+
 ipcMain.handle('git:worktree-add', async (_, projectPath: string, branchName: string) => {
   const worktreePath = path.join(projectPath, '..', `${path.basename(projectPath)}-${branchName}`);
   
@@ -150,4 +242,18 @@ function parseWorktrees(output: string): Array<{ path: string; branch: string; h
   }
 
   return worktrees;
+}
+
+function parseGitStatus(output: string): Array<{ path: string; status: string; staged: boolean; modified: boolean }> {
+  const lines = output.trim().split('\n').filter(line => line.length > 0);
+  return lines.map(line => {
+    const status = line.substring(0, 2);
+    const path = line.substring(3);
+    return {
+      path,
+      status,
+      staged: status[0] !== ' ' && status[0] !== '?',
+      modified: status[1] !== ' ' && status[1] !== '?'
+    };
+  });
 }
