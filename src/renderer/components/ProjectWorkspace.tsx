@@ -1,5 +1,5 @@
 import { WorktreePanel } from './WorktreePanel';
-import { ClaudeTerminal } from './ClaudeTerminal';
+import { RightPaneView } from './RightPaneView';
 import { useProjects } from '../contexts/ProjectContext';
 
 interface ProjectWorkspaceProps {
@@ -23,7 +23,7 @@ export function ProjectWorkspace({ projectId }: ProjectWorkspaceProps) {
         onWorktreesChange={(worktrees) => updateProjectWorktrees(projectId, worktrees)}
       />
       {project.selectedWorktree && (
-        <ClaudeTerminal 
+        <RightPaneView 
           worktreePath={project.selectedWorktree} 
           projectId={projectId}
         />

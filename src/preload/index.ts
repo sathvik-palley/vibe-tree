@@ -6,6 +6,12 @@ const api = {
       ipcRenderer.invoke('git:worktree-list', projectPath),
     addWorktree: (projectPath: string, branchName: string) => 
       ipcRenderer.invoke('git:worktree-add', projectPath, branchName),
+    status: (worktreePath: string) =>
+      ipcRenderer.invoke('git:status', worktreePath),
+    diff: (worktreePath: string, filePath?: string) =>
+      ipcRenderer.invoke('git:diff', worktreePath, filePath),
+    diffStaged: (worktreePath: string, filePath?: string) =>
+      ipcRenderer.invoke('git:diff-staged', worktreePath, filePath),
   },
   shell: {
     start: (worktreePath: string, cols?: number, rows?: number) => 

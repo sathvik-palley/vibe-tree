@@ -9,6 +9,14 @@ export interface ElectronAPI {
       path: string;
       branch: string;
     }>;
+    status: (worktreePath: string) => Promise<Array<{
+      path: string;
+      status: string;
+      staged: boolean;
+      modified: boolean;
+    }>>;
+    diff: (worktreePath: string, filePath?: string) => Promise<string>;
+    diffStaged: (worktreePath: string, filePath?: string) => Promise<string>;
   };
   shell: {
     start: (worktreePath: string, cols?: number, rows?: number) => Promise<{ success: boolean; processId?: string; isNew?: boolean; error?: string }>;

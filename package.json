@@ -51,6 +51,7 @@
     "wait-on": "^8.0.4"
   },
   "dependencies": {
+    "@git-diff-view/react": "^0.0.30",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-dropdown-menu": "^2.1.15",
     "@radix-ui/react-popover": "^1.0.7",
