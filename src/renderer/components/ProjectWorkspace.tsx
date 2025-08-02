@@ -4,9 +4,10 @@ import { useProjects } from '../contexts/ProjectContext';
 
 interface ProjectWorkspaceProps {
   projectId: string;
+  theme?: 'light' | 'dark';
 }
 
-export function ProjectWorkspace({ projectId }: ProjectWorkspaceProps) {
+export function ProjectWorkspace({ projectId, theme }: ProjectWorkspaceProps) {
   const { getProject, setSelectedWorktree, updateProjectWorktrees } = useProjects();
   const project = getProject(projectId);
 
@@ -26,6 +27,7 @@ export function ProjectWorkspace({ projectId }: ProjectWorkspaceProps) {
         <RightPaneView 
           worktreePath={project.selectedWorktree} 
           projectId={projectId}
+          theme={theme}
         />
       )}
     </div>

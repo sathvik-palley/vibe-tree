@@ -101,7 +101,7 @@ function AppContent() {
               value={project.id}
               className="flex-1 m-0 h-full"
             >
-              <ProjectWorkspace projectId={project.id} />
+              <ProjectWorkspace projectId={project.id} theme={theme} />
             </TabsContent>
           ))}
         </Tabs>

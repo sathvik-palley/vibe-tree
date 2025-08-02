@@ -13,12 +13,13 @@ import '@xterm/xterm/css/xterm.css';
 interface ClaudeTerminalProps {
   worktreePath: string;
   projectId?: string;
+  theme?: 'light' | 'dark';
 }
 
 // Cache for terminal states per worktree
 const terminalStateCache = new Map<string, string>();
 
-export function ClaudeTerminal({ worktreePath }: ClaudeTerminalProps) {
+export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const [terminal, setTerminal] = useState<Terminal | null>(null);
   const processIdRef = useRef<string>('');
@@ -33,31 +34,61 @@ export function ClaudeTerminal({ worktreePath }: ClaudeTerminalProps) {
 
     console.log('Initializing terminal...');
 
-    // Create terminal instance
+    // Create terminal instance with theme-aware colors
+    const getTerminalTheme = (currentTheme: 'light' | 'dark') => {
+      if (currentTheme === 'light') {
+        return {
+          background: '#ffffff',
+          foreground: '#000000',
+          cursor: '#000000',
+          cursorAccent: '#ffffff',
+          selectionBackground: '#b5b5b5',
+          black: '#000000',
+          red: '#cd3131',
+          green: '#0dbc79',
+          yellow: '#e5e510',
+          blue: '#2472c8',
+          magenta: '#bc3fbc',
+          cyan: '#11a8cd',
+          white: '#e5e5e5',
+          brightBlack: '#666666',
+          brightRed: '#f14c4c',
+          brightGreen: '#23d18b',
+          brightYellow: '#f5f543',
+          brightBlue: '#3b8eea',
+          brightMagenta: '#d670d6',
+          brightCyan: '#29b8db',
+          brightWhite: '#e5e5e5'
+        };
+      } else {
+        return {
+          background: '#000000',
+          foreground: '#ffffff',
+          cursor: '#ffffff',
+          cursorAccent: '#000000',
+          selectionBackground: '#4a4a4a',
+          black: '#000000',
+          red: '#cd3131',
+          green: '#0dbc79',
+          yellow: '#e5e510',
+          blue: '#2472c8',
+          magenta: '#bc3fbc',
+          cyan: '#11a8cd',
+          white: '#e5e5e5',
+          brightBlack: '#666666',
+          brightRed: '#f14c4c',
+          brightGreen: '#23d18b',
+          brightYellow: '#f5f543',
+          brightBlue: '#3b8eea',
+          brightMagenta: '#d670d6',
+          brightCyan: '#29b8db',
+          brightWhite: '#e5e5e5'
+        };
+      }
+    };
+
     const term = new Terminal({
-      theme: {
-        background: '#000000',
-        foreground: '#ffffff',
-        cursor: '#ffffff',
-        cursorAccent: '#000000',
-        selectionBackground: '#4a4a4a',
-        black: '#000000',
-        red: '#cd3131',
-        green: '#0dbc79',
-        yellow: '#e5e510',
-        blue: '#2472c8',
-        magenta: '#bc3fbc',
-        cyan: '#11a8cd',
-        white: '#e5e5e5',
-        brightBlack: '#666666',
-        brightRed: '#f14c4c',
-        brightGreen: '#23d18b',
-        brightYellow: '#f5f543',
-        brightBlue: '#3b8eea',
-        brightMagenta: '#d670d6',
-        brightCyan: '#29b8db',
-        brightWhite: '#e5e5e5'
-      },
+      theme: getTerminalTheme(theme),
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
       fontSize: 14,
       lineHeight: 1.2,
@@ -273,28 +304,32 @@ export function ClaudeTerminal({ worktreePath }: ClaudeTerminalProps) {
     window.electronAPI.ide.detect().then(setDetectedIDEs);
   }, []);
 
-  // Update theme
+  // Update theme when prop changes
   useEffect(() => {
     if (!terminal) return;
 
-    const updateTheme = async () => {
-      const theme = await window.electronAPI.theme.get();
-      if (theme === 'dark') {
-        terminal.options.theme = {
-          background: '#000000',
-          foreground: '#ffffff',
-        };
-      } else {
-        terminal.options.theme = {
+    const getTerminalTheme = (currentTheme: 'light' | 'dark') => {
+      if (currentTheme === 'light') {
+        return {
           background: '#ffffff',
           foreground: '#000000',
+          cursor: '#000000',
+          cursorAccent: '#ffffff',
+          selectionBackground: '#b5b5b5'
+        };
+      } else {
+        return {
+          background: '#000000',
+          foreground: '#ffffff',
+          cursor: '#ffffff',
+          cursorAccent: '#000000',
+          selectionBackground: '#4a4a4a'
         };
       }
     };
 
-    updateTheme();
-    window.electronAPI.theme.onChange(updateTheme);
-  }, [terminal]);
+    terminal.options.theme = getTerminalTheme(theme);
+  }, [terminal, theme]);
 
   const handleOpenInIDE = async (ideName: string) => {
     try {
@@ -356,7 +391,7 @@ export function ClaudeTerminal({ worktreePath }: ClaudeTerminalProps) {
 
       <div 
         ref={terminalRef} 
-        className="flex-1 min-h-0 bg-black"
+        className={`flex-1 min-h-0 ${theme === 'light' ? 'bg-white' : 'bg-black'}`}
         style={{ minHeight: '100px' }}
       />
     </div>

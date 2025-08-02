@@ -7,9 +7,10 @@ import { Terminal, GitBranch } from 'lucide-react';
 interface RightPaneViewProps {
   worktreePath: string;
   projectId?: string;
+  theme?: 'light' | 'dark';
 }
 
-export function RightPaneView({ worktreePath, projectId }: RightPaneViewProps) {
+export function RightPaneView({ worktreePath, projectId, theme }: RightPaneViewProps) {
   const [activeTab, setActiveTab] = useState('terminal');
 
   return (
@@ -45,6 +46,7 @@ export function RightPaneView({ worktreePath, projectId }: RightPaneViewProps) {
           <ClaudeTerminal 
             worktreePath={worktreePath} 
             projectId={projectId}
+            theme={theme}
           />
         </TabsContent>
 
@@ -52,7 +54,7 @@ export function RightPaneView({ worktreePath, projectId }: RightPaneViewProps) {
           value="git-diff"
           className="flex-1 m-0 h-full"
         >
-          <GitDiffView worktreePath={worktreePath} />
+          <GitDiffView worktreePath={worktreePath} theme={theme} />
         </TabsContent>
       </Tabs>
     </div>
