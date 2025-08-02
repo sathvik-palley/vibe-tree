@@ -136,8 +136,8 @@ export function GitDiffView({ worktreePath, theme = 'light' }: GitDiffViewProps)
         </div>
       </div>
 
-      <div className="flex-1 flex min-h-0">
-        <div className="w-80 border-r flex flex-col">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        <div className="w-80 border-r flex flex-col min-w-0">
           <div className="p-3 border-b bg-muted/50">
             <h4 className="text-sm font-medium">
               {viewMode === 'staged' ? 'Staged Changes' : 'Unstaged Changes'} ({filteredFiles.length})
@@ -172,7 +172,7 @@ export function GitDiffView({ worktreePath, theme = 'light' }: GitDiffViewProps)
           </ScrollArea>
         </div>
 
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {error ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
@@ -199,8 +199,8 @@ export function GitDiffView({ worktreePath, theme = 'light' }: GitDiffViewProps)
               </div>
             </div>
           ) : (
-            <ScrollArea className="flex-1">
-              <div className="p-4">
+            <ScrollArea className="flex-1 w-full">
+              <div className="p-4 w-full overflow-hidden">
                 <DiffView
                   data={{
                     oldFile: { 
@@ -216,6 +216,9 @@ export function GitDiffView({ worktreePath, theme = 'light' }: GitDiffViewProps)
                   diffViewMode={DiffModeEnum.Split}
                   diffViewTheme={theme}
                   diffViewHighlight={true}
+                  diffViewWrap={true}
+                  className="w-full"
+                  style={{ maxWidth: '100%', overflow: 'hidden' }}
                 />
               </div>
             </ScrollArea>
