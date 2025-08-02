@@ -14,9 +14,10 @@ interface GitFile {
 
 interface GitDiffViewProps {
   worktreePath: string;
+  theme?: 'light' | 'dark';
 }
 
-export function GitDiffView({ worktreePath }: GitDiffViewProps) {
+export function GitDiffView({ worktreePath, theme = 'light' }: GitDiffViewProps) {
   const [files, setFiles] = useState<GitFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [diffText, setDiffText] = useState<string>('');
@@ -213,7 +214,7 @@ export function GitDiffView({ worktreePath }: GitDiffViewProps) {
                     hunks: [diffText]
                   }}
                   diffViewMode={DiffModeEnum.Split}
-                  diffViewTheme="light"
+                  diffViewTheme={theme}
                   diffViewHighlight={true}
                 />
               </div>
