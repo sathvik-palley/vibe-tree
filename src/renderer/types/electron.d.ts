@@ -9,6 +9,7 @@ export interface ElectronAPI {
       path: string;
       branch: string;
     }>;
+    removeWorktree: (worktreePath: string) => Promise<void>;
     status: (worktreePath: string) => Promise<Array<{
       path: string;
       status: string;

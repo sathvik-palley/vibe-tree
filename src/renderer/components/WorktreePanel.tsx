@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import { Input } from './ui/input';
 import { ScrollArea } from './ui/scroll-area';
-import { GitBranch, Plus, RefreshCw } from 'lucide-react';
+import { GitBranch, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useToast } from './ui/use-toast';
 
 interface Worktree {
@@ -68,6 +68,31 @@ export function WorktreePanel({ projectPath, selectedWorktree, onSelectWorktree,
     }
   };
 
+  const handleDeleteWorktree = async (worktree: Worktree, event: React.MouseEvent) => {
+    event.stopPropagation();
+    
+    try {
+      await window.electronAPI.git.removeWorktree(worktree.path);
+      toast({
+        title: "Success",
+        description: `Deleted worktree for branch ${worktree.branch}`,
+      });
+      
+      // If the deleted worktree was selected, clear the selection
+      if (selectedWorktree === worktree.path) {
+        onSelectWorktree('');
+      }
+      
+      loadWorktrees();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete worktree",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="w-80 border-r flex flex-col h-full">
       <div className="h-[57px] px-4 border-b flex-shrink-0 flex flex-col justify-center">
@@ -97,21 +122,34 @@ export function WorktreePanel({ projectPath, selectedWorktree, onSelectWorktree,
       <ScrollArea className="flex-1 h-0">
         <div className="p-2">
           {worktrees.map((worktree) => (
-            <button
+            <div
               key={worktree.path}
-              onClick={() => onSelectWorktree(worktree.path)}
-              className={`w-full text-left p-3 rounded-md transition-colors flex items-center gap-1.5 ${
+              className={`w-full rounded-md transition-colors flex items-center gap-1.5 group ${
                 selectedWorktree === worktree.path
                   ? 'bg-accent'
                   : 'hover:bg-accent/50'
               }`}
             >
-              <GitBranch className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{worktree.branch}</div>
-                <div className="text-xs text-muted-foreground truncate">{worktree.path}</div>
-              </div>
-            </button>
+              <button
+                onClick={() => onSelectWorktree(worktree.path)}
+                className="flex-1 text-left p-3 flex items-center gap-1.5 min-w-0"
+              >
+                <GitBranch className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{worktree.branch}</div>
+                  <div className="text-xs text-muted-foreground truncate">{worktree.path}</div>
+                </div>
+              </button>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={(e) => handleDeleteWorktree(worktree, e)}
+                className="h-8 w-8 mr-2 bg-red-100 border border-red-300 hover:bg-red-200"
+                title={`Delete ${worktree.branch} (${worktree.path})`}
+              >
+                <Trash2 className="h-4 w-4 text-red-600" />
+              </Button>
+            </div>
           ))}
         </div>
       </ScrollArea>

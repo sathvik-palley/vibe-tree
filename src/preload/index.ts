@@ -6,6 +6,8 @@ const api = {
       ipcRenderer.invoke('git:worktree-list', projectPath),
     addWorktree: (projectPath: string, branchName: string) => 
       ipcRenderer.invoke('git:worktree-add', projectPath, branchName),
+    removeWorktree: (worktreePath: string) => 
+      ipcRenderer.invoke('git:worktree-remove', worktreePath),
     status: (worktreePath: string) =>
       ipcRenderer.invoke('git:status', worktreePath),
     diff: (worktreePath: string, filePath?: string) =>

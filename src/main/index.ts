@@ -200,6 +200,28 @@ ipcMain.handle('git:worktree-add', async (_, projectPath: string, branchName: st
   });
 });
 
+ipcMain.handle('git:worktree-remove', async (_, worktreePath: string) => {
+  return new Promise((resolve, reject) => {
+    const child = spawn('git', ['worktree', 'remove', '--force', worktreePath], {
+      cwd: path.dirname(worktreePath)
+    });
+
+    let stderr = '';
+
+    child.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve(undefined);
+      } else {
+        reject(new Error(stderr || 'Failed to remove worktree'));
+      }
+    });
+  });
+});
+
 // Claude process manager is initialized in claude-manager.ts
 
 // Theme handling
