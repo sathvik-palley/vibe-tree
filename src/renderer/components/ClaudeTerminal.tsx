@@ -157,7 +157,7 @@ export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalP
       removeListenersRef.current = [];
       term.dispose();
     };
-  }, []);
+  }, [theme]);
 
   // Save terminal state before unmounting or changing worktree
   useEffect(() => {

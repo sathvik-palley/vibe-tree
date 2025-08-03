@@ -6,6 +6,8 @@ const api = {
       ipcRenderer.invoke('git:worktree-list', projectPath),
     addWorktree: (projectPath: string, branchName: string) => 
       ipcRenderer.invoke('git:worktree-add', projectPath, branchName),
+    removeWorktree: (projectPath: string, worktreePath: string, branchName: string) => 
+      ipcRenderer.invoke('git:worktree-remove', projectPath, worktreePath, branchName),
     status: (worktreePath: string) =>
       ipcRenderer.invoke('git:status', worktreePath),
     diff: (worktreePath: string, filePath?: string) =>
@@ -26,13 +28,13 @@ const api = {
       ipcRenderer.invoke('shell:get-buffer', processId),
     onOutput: (processId: string, callback: (data: string) => void) => {
       const channel = `shell:output:${processId}`;
-      const listener = (_: any, data: string) => callback(data);
+      const listener = (_: unknown, data: string) => callback(data);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
     onExit: (processId: string, callback: (code: number) => void) => {
       const channel = `shell:exit:${processId}`;
-      const listener = (_: any, code: number) => callback(code);
+      const listener = (_: unknown, code: number) => callback(code);
       ipcRenderer.on(channel, listener);
       return () => ipcRenderer.removeListener(channel, listener);
     },
