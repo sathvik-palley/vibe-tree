@@ -22,6 +22,7 @@ export function ProjectWorkspace({ projectId, theme }: ProjectWorkspaceProps) {
         selectedWorktree={project.selectedWorktree}
         onSelectWorktree={(worktree) => setSelectedWorktree(projectId, worktree)}
         onWorktreesChange={(worktrees) => updateProjectWorktrees(projectId, worktrees)}
+        initialWorktrees={project.worktrees}
       />
       {project.selectedWorktree && (
         <RightPaneView 

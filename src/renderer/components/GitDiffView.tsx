@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Button } from './ui/button';
 import { ScrollArea } from './ui/scroll-area';
 import { RefreshCw, FileText } from 'lucide-react';
@@ -25,7 +25,7 @@ export function GitDiffView({ worktreePath, theme = 'light' }: GitDiffViewProps)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const loadGitStatus = async () => {
+  const loadGitStatus = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -40,9 +40,9 @@ export function GitDiffView({ worktreePath, theme = 'light' }: GitDiffViewProps)
     } finally {
       setLoading(false);
     }
-  };
+  }, [worktreePath, selectedFile]);
 
-  const loadDiff = async (filePath: string, staged: boolean = false) => {
+  const loadDiff = useCallback(async (filePath: string, staged: boolean = false) => {
     try {
       setLoading(true);
       setError(null);
@@ -57,13 +57,13 @@ export function GitDiffView({ worktreePath, theme = 'light' }: GitDiffViewProps)
     } finally {
       setLoading(false);
     }
-  };
+  }, [worktreePath]);
 
   useEffect(() => {
     if (worktreePath) {
       loadGitStatus();
     }
-  }, [worktreePath]);
+  }, [worktreePath, loadGitStatus]);
 
   useEffect(() => {
     if (selectedFile) {
@@ -79,7 +79,7 @@ export function GitDiffView({ worktreePath, theme = 'light' }: GitDiffViewProps)
         }
       }
     }
-  }, [selectedFile, viewMode, files]);
+  }, [selectedFile, viewMode, files, loadDiff]);
 
   const getStatusIcon = (status: string) => {
     switch (status[0]) {

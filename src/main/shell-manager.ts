@@ -6,7 +6,7 @@ interface ShellProcess {
   pty: pty.IPty;
   worktreePath: string;
   processId: string;
-  listeners: Map<string, { handler: (data: string) => void; disposable?: any }>;
+  listeners: Map<string, { handler: (data: string) => void; disposable?: { dispose(): void } }>;
 }
 
 class ShellProcessManager {

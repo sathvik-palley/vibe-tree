@@ -101,7 +101,9 @@ class IDEDetector {
           command: 'cursor'
         });
       }
-    } catch {}
+    } catch {
+      // IDE not found, continue
+    }
 
     try {
       await execAsync('which code');
@@ -111,7 +113,9 @@ class IDEDetector {
           command: 'code'
         });
       }
-    } catch {}
+    } catch {
+      // IDE not found, continue
+    }
   }
 
   private async detectWindowsIDEs() {
@@ -154,7 +158,9 @@ class IDEDetector {
           command: 'cursor'
         });
       }
-    } catch {}
+    } catch {
+      // IDE not found, continue
+    }
 
     try {
       await execAsync('where code');
@@ -164,7 +170,9 @@ class IDEDetector {
           command: 'code'
         });
       }
-    } catch {}
+    } catch {
+      // IDE not found, continue
+    }
   }
 
   private async detectLinuxIDEs() {
@@ -175,7 +183,9 @@ class IDEDetector {
         name: 'Cursor',
         command: 'cursor'
       });
-    } catch {}
+    } catch {
+      // IDE not found, continue
+    }
 
     try {
       await execAsync('which code');
@@ -183,7 +193,9 @@ class IDEDetector {
         name: 'Visual Studio Code',
         command: 'code'
       });
-    } catch {}
+    } catch {
+      // IDE not found, continue
+    }
   }
 }
 

@@ -200,6 +200,48 @@ ipcMain.handle('git:worktree-add', async (_, projectPath: string, branchName: st
   });
 });
 
+ipcMain.handle('git:worktree-remove', async (_, projectPath: string, worktreePath: string, branchName: string) => {
+  return new Promise((resolve, reject) => {
+    // First remove the worktree
+    const removeWorktree = spawn('git', ['worktree', 'remove', worktreePath, '--force'], {
+      cwd: projectPath
+    });
+
+    let stderr = '';
+
+    removeWorktree.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    removeWorktree.on('close', (code) => {
+      if (code === 0) {
+        // Then delete the branch
+        const deleteBranch = spawn('git', ['branch', '-D', branchName], {
+          cwd: projectPath
+        });
+
+        let branchStderr = '';
+
+        deleteBranch.stderr.on('data', (data) => {
+          branchStderr += data.toString();
+        });
+
+        deleteBranch.on('close', (branchCode) => {
+          if (branchCode === 0) {
+            resolve({ success: true });
+          } else {
+            // If branch deletion fails, still consider it success since worktree was removed
+            console.warn('Failed to delete branch but worktree was removed:', branchStderr);
+            resolve({ success: true, warning: `Worktree removed but failed to delete branch: ${branchStderr}` });
+          }
+        });
+      } else {
+        reject(new Error(stderr || 'Failed to remove worktree'));
+      }
+    });
+  });
+});
+
 // Claude process manager is initialized in claude-manager.ts
 
 // Theme handling
@@ -222,12 +264,12 @@ ipcMain.handle('dialog:select-directory', async () => {
 function parseWorktrees(output: string): Array<{ path: string; branch: string; head: string }> {
   const lines = output.trim().split('\n');
   const worktrees = [];
-  let current: any = {};
+  let current: { path?: string; branch?: string; head?: string } = {};
 
   for (const line of lines) {
     if (line.startsWith('worktree ')) {
-      if (current.path) {
-        worktrees.push(current);
+      if (current.path && current.branch && current.head) {
+        worktrees.push(current as { path: string; branch: string; head: string });
       }
       current = { path: line.substring(9) };
     } else if (line.startsWith('HEAD ')) {
@@ -237,8 +279,8 @@ function parseWorktrees(output: string): Array<{ path: string; branch: string; h
     }
   }
 
-  if (current.path) {
-    worktrees.push(current);
+  if (current.path && current.branch && current.head) {
+    worktrees.push(current as { path: string; branch: string; head: string });
   }
 
   return worktrees;
