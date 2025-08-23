@@ -30,13 +30,14 @@ export default defineConfig({
   ],
   server: {
     port: 3000,
+    host: '0.0.0.0', // Bind to all network interfaces for network access
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:3002',
         changeOrigin: true
       },
       '/ws': {
-        target: 'ws://localhost:3001',
+        target: 'ws://localhost:3002',
         ws: true
       }
     }

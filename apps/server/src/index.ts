@@ -2,8 +2,6 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import cors from 'cors';
 import http from 'http';
-import path from 'path';
-import fs from 'fs';
 import dotenv from 'dotenv';
 import qrcode from 'qrcode';
 import { setupWebSocketHandlers } from './api/websocket';
@@ -22,14 +20,6 @@ const PROJECT_PATH = process.env.PROJECT_PATH || process.cwd();
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// Serve static files from web app dist folder (in production)
-// Navigate from apps/server to apps/web/dist
-const webDistPath = path.resolve(__dirname, '../../web/dist');
-if (fs.existsSync(webDistPath)) {
-  app.use(express.static(webDistPath));
-  console.log(`Serving static files from: ${webDistPath}`);
-}
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -52,71 +42,60 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', version: '0.0.1' });
 });
 
-// Catch-all route - serve index.html for client-side routing
-// This must be after all API routes
-app.get('*', (req, res) => {
-  const indexPath = path.join(webDistPath, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.status(404).send(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>VibeTree</title>
-          <style>
-            body { font-family: system-ui; padding: 40px; text-align: center; }
-            h1 { color: #333; }
-            p { color: #666; margin: 20px 0; }
-            code { background: #f4f4f4; padding: 4px 8px; border-radius: 4px; }
-          </style>
-        </head>
-        <body>
-          <h1>VibeTree Server</h1>
-          <p>Web UI not found. Please build the web app first:</p>
-          <code>pnpm --filter @vibetree/web build</code>
-          <p>Then restart the server.</p>
-          <hr>
-          <p>API endpoints are available at <code>/api/*</code></p>
-          <p>WebSocket endpoint: <code>ws://${req.headers.host}</code></p>
-        </body>
-      </html>
-    `);
-  }
+// Root endpoint - provide server info
+app.get('/', (req, res) => {
+  res.json({
+    name: 'VibeTree Socket Server',
+    version: '0.0.1',
+    endpoints: {
+      websocket: `ws://${req.headers.host}`,
+      health: '/health',
+      config: '/api/config',
+      api: '/api/*'
+    },
+    webApp: {
+      url: 'http://localhost:3000',
+      note: 'Run "pnpm dev:web" to start the web interface'
+    }
+  });
 });
 
 // Start server
 server.listen(parseInt(PORT.toString()), HOST, async () => {
-  const urls = getNetworkUrls(PORT, HOST);
+  const socketUrls = getNetworkUrls(PORT, HOST);
+  const webUrls = getNetworkUrls(3000, HOST); // Web app runs on port 3000
   
   console.log('\n╔════════════════════════════════════════════════════════╗');
-  console.log('║                  VibeTree Server Started                  ║');
+  console.log('║               VibeTree Services Started                   ║');
   console.log('╚════════════════════════════════════════════════════════╝\n');
   
-  console.log(`📁 Project Path: ${PROJECT_PATH}`);
-  console.log(`🌐 Local URL:    ${urls.local}`);
-  console.log(`📱 Network URL:  ${urls.network}`);
-  console.log(`🔌 WebSocket:    ws://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
-  
-  // Check if web UI is built
-  const indexPath = path.join(webDistPath, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    console.log(`✅ Web UI:       Serving from ${webDistPath}`);
-  } else {
-    console.log(`⚠️  Web UI:       Not built (run: pnpm build:web)`);
-  }
+  console.log('📁 Project Path:', PROJECT_PATH);
   console.log();
   
-  // Generate QR code for mobile access
+  console.log('🌐 Web Application (UI):');
+  console.log(`   Local:   ${webUrls.local}`);
+  console.log(`   Network: ${webUrls.network}`);
+  console.log();
+  
+  console.log('🔌 Socket Server (API/WebSocket):');
+  console.log(`   Local:   ${socketUrls.local}`);
+  console.log(`   Network: ${socketUrls.network}`);
+  console.log(`   WS:      ws://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
+  console.log();
+  
+  // Generate QR code for mobile access to web app
   if (HOST === '0.0.0.0' || !HOST) {
     try {
-      const qr = await qrcode.toString(urls.network, { type: 'terminal', small: true });
-      console.log('📱 Scan QR code to access from mobile:\n');
+      const qr = await qrcode.toString(webUrls.network, { type: 'terminal', small: true });
+      console.log('📱 Scan QR code to access Web UI from mobile:\n');
       console.log(qr);
+      console.log(`   ${webUrls.network}`);
+      console.log();
     } catch (err) {
       console.error('Failed to generate QR code:', err);
     }
   }
   
+  console.log('ℹ️  Make sure the web app is running: pnpm dev:web');
   console.log('Press Ctrl+C to stop the server\n');
 });

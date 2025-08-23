@@ -22,13 +22,24 @@ export function useWebSocket() {
     setError(null);
 
     try {
-      // Get WebSocket URL from environment or use same host as the page
+      // Get WebSocket URL from environment or construct from current host
       let wsUrl = import.meta.env.VITE_WS_URL;
+      
       if (!wsUrl) {
-        // Use same host as the page is served from
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        wsUrl = `${protocol}//${window.location.host}`;
+        // If accessing from network (not localhost), use the same host but port 3002
+        const isLocalhost = window.location.hostname === 'localhost' || 
+                          window.location.hostname === '127.0.0.1';
+        
+        if (isLocalhost) {
+          wsUrl = 'ws://localhost:3002';
+        } else {
+          // Use the same host but different port for network access
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          wsUrl = `${protocol}//${window.location.hostname}:3002`;
+        }
       }
+      
+      console.log('Connecting to WebSocket:', wsUrl);
       
       // Create adapter (without JWT for now - will add auth later)
       const adapter = new WebSocketAdapter(wsUrl);
@@ -44,7 +55,11 @@ export function useWebSocket() {
       let finalProjectPath = projectPath;
       if (!finalProjectPath) {
         try {
-          const response = await fetch('/api/config');
+          // Use the same host logic for API calls
+          const isLocalhost = window.location.hostname === 'localhost' || 
+                            window.location.hostname === '127.0.0.1';
+          const apiHost = isLocalhost ? 'http://localhost:3002' : `http://${window.location.hostname}:3002`;
+          const response = await fetch(`${apiHost}/api/config`);
           const config = await response.json();
           finalProjectPath = config.projectPath;
           setProjectPath(finalProjectPath);
