@@ -22,8 +22,13 @@ export function useWebSocket() {
     setError(null);
 
     try {
-      // Get WebSocket URL from environment or use default
-      const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
+      // Get WebSocket URL from environment or use same host as the page
+      let wsUrl = import.meta.env.VITE_WS_URL;
+      if (!wsUrl) {
+        // Use same host as the page is served from
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = `${protocol}//${window.location.host}`;
+      }
       
       // Create adapter (without JWT for now - will add auth later)
       const adapter = new WebSocketAdapter(wsUrl);

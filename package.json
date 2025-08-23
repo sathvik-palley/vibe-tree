@@ -13,6 +13,8 @@
     "dev:ui": "pnpm --filter @vibetree/ui dev",
     "build": "turbo run build",
     "build:deps": "pnpm --filter @vibetree/core build && pnpm --filter @vibetree/ui build",
+    "build:web": "pnpm build:deps && pnpm --filter @vibetree/web build",
+    "start:server": "pnpm build:web && pnpm --filter @vibetree/server dev",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "clean": "turbo run clean",
