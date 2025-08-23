@@ -1,11 +1,20 @@
 import * as pty from 'node-pty';
 import { v4 as uuidv4 } from 'uuid';
-import { ShellStartResult, ShellWriteResult, ShellResizeResult } from '@vibetree/core';
-import { createPtyProcess, writeToPty, resizePty, onPtyExit } from '@vibetree/core';
+import { 
+  ShellStartResult, 
+  ShellWriteResult, 
+  ShellResizeResult,
+  getDefaultShell,
+  getPtyOptions,
+  writeToPty, 
+  resizePty, 
+  onPtyExit,
+  type IPty
+} from '@vibetree/core';
 
 interface ShellSession {
   id: string;
-  pty: pty.IPty;
+  pty: IPty;
   worktreePath: string;
   userId?: string;
   createdAt: Date;
@@ -24,7 +33,9 @@ export class ShellManager {
   async startShell(worktreePath: string, userId?: string, cols = 80, rows = 30): Promise<ShellStartResult> {
     try {
       const sessionId = uuidv4();
-      const ptyProcess = createPtyProcess(worktreePath, cols, rows);
+      const shell = getDefaultShell();
+      const options = getPtyOptions(worktreePath, cols, rows);
+      const ptyProcess = pty.spawn(shell, [], options);
 
       const session: ShellSession = {
         id: sessionId,

@@ -8,9 +8,11 @@
     "dev:desktop": "pnpm --filter @vibetree/desktop dev",
     "dev:server": "pnpm --filter @vibetree/server dev",
     "dev:web": "pnpm --filter @vibetree/web dev",
+    "dev:web-app": "pnpm build:deps && concurrently \"pnpm dev:server\" \"pnpm dev:web\"",
     "dev:core": "pnpm --filter @vibetree/core dev",
     "dev:ui": "pnpm --filter @vibetree/ui dev",
     "build": "turbo run build",
+    "build:deps": "pnpm --filter @vibetree/core build && pnpm --filter @vibetree/ui build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
     "clean": "turbo run clean",
@@ -29,7 +31,8 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "turbo": "^1.11.2"
+    "turbo": "^1.11.2",
+    "concurrently": "^8.2.2"
   },
   "packageManager": "pnpm@8.14.0",
   "engines": {

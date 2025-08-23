@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -X POST http://127.0.0.1:7878/notification -H \"Content-Type: application/json\" -d '{\"type\": \"claude-needs-input\", \"worktree\": \"'$PWD'\", \"message\": \"'$CLAUDE_NOTIFICATION'\"}' --silent --fail || true"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ \"$CLAUDE_STOP_HOOK_ACTIVE\" != \"true\" ] && curl -X POST http://127.0.0.1:7878/notification -H \"Content-Type: application/json\" -d '{\"type\": \"claude-finished\", \"worktree\": \"'$PWD'\", \"message\": \"Task completed\"}' --silent --fail || true"
+          }
+        ]
+      }
+    ]
+  }
+}

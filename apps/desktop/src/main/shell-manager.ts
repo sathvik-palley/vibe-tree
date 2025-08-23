@@ -1,16 +1,18 @@
 import { ipcMain } from 'electron';
 import * as pty from 'node-pty';
 import { 
-  createPtyProcess, 
+  getDefaultShell,
+  getPtyOptions,
   writeToPty, 
   resizePty, 
   generateSessionId,
   onPtyData,
-  onPtyExit
+  onPtyExit,
+  type IPty
 } from '@vibetree/core';
 
 interface ShellProcess {
-  pty: pty.IPty;
+  pty: IPty;
   worktreePath: string;
   processId: string;
   listeners: Map<string, { handler: (data: string) => void; disposable?: { dispose(): void } }>;
@@ -79,8 +81,10 @@ class ShellProcessManager {
     }
 
     try {
-      // Create PTY instance using core utility
-      const ptyProcess = createPtyProcess(worktreePath, cols, rows);
+      // Create PTY instance
+      const shell = getDefaultShell();
+      const options = getPtyOptions(worktreePath, cols, rows);
+      const ptyProcess = pty.spawn(shell, [], options);
 
       // Create process with listeners map
       const shellProcess: ShellProcess = {

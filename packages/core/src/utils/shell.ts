@@ -1,29 +1,43 @@
-import * as pty from 'node-pty';
 import * as crypto from 'crypto';
 
+// Type definitions to avoid importing node-pty directly
+export interface IPty {
+  write(data: string): void;
+  resize(cols: number, rows: number): void;
+  kill(): void;
+  onData(callback: (data: string) => void): { dispose: () => void };
+  onExit(callback: (event: { exitCode: number }) => void): { dispose: () => void };
+}
+
 /**
- * Create a new PTY process for shell interaction
+ * Get the default shell for the current platform
+ * @returns Shell path
+ */
+export function getDefaultShell(): string {
+  return process.platform === 'win32' 
+    ? 'powershell.exe' 
+    : process.env.SHELL || '/bin/bash';
+}
+
+/**
+ * Get PTY spawn options
  * @param worktreePath - Directory to start the shell in
  * @param cols - Terminal columns (default: 80)
  * @param rows - Terminal rows (default: 30)
- * @returns PTY process instance
+ * @returns Options for spawning PTY
  */
-export function createPtyProcess(
+export function getPtyOptions(
   worktreePath: string, 
   cols: number = 80, 
   rows: number = 30
-): pty.IPty {
-  const shell = process.platform === 'win32' 
-    ? 'powershell.exe' 
-    : process.env.SHELL || '/bin/bash';
-
-  return pty.spawn(shell, [], {
+): any {
+  return {
     name: 'xterm-256color',
     cols,
     rows,
     cwd: worktreePath,
     env: process.env as Record<string, string>
-  });
+  };
 }
 
 /**
@@ -31,7 +45,7 @@ export function createPtyProcess(
  * @param ptyProcess - The PTY process to write to
  * @param data - Data to write
  */
-export function writeToPty(ptyProcess: pty.IPty, data: string): void {
+export function writeToPty(ptyProcess: IPty, data: string): void {
   ptyProcess.write(data);
 }
 
@@ -41,7 +55,7 @@ export function writeToPty(ptyProcess: pty.IPty, data: string): void {
  * @param cols - New column count
  * @param rows - New row count
  */
-export function resizePty(ptyProcess: pty.IPty, cols: number, rows: number): void {
+export function resizePty(ptyProcess: IPty, cols: number, rows: number): void {
   ptyProcess.resize(cols, rows);
 }
 
@@ -49,7 +63,7 @@ export function resizePty(ptyProcess: pty.IPty, cols: number, rows: number): voi
  * Kill a PTY process
  * @param ptyProcess - The PTY process to kill
  */
-export function killPty(ptyProcess: pty.IPty): void {
+export function killPty(ptyProcess: IPty): void {
   ptyProcess.kill();
 }
 
@@ -72,7 +86,7 @@ export function generateSessionId(worktreePath: string): string {
  * @returns Disposable to remove the listener
  */
 export function onPtyData(
-  ptyProcess: pty.IPty, 
+  ptyProcess: IPty, 
   callback: (data: string) => void
 ): { dispose: () => void } {
   return ptyProcess.onData(callback);
@@ -85,7 +99,7 @@ export function onPtyData(
  * @returns Disposable to remove the listener
  */
 export function onPtyExit(
-  ptyProcess: pty.IPty, 
+  ptyProcess: IPty, 
   callback: (exitCode: number) => void
 ): { dispose: () => void } {
   return ptyProcess.onExit((event) => callback(event.exitCode));

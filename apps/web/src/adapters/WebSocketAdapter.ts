@@ -21,7 +21,7 @@ export class WebSocketAdapter extends BaseAdapter {
     super();
   }
 
-  private async connect(): Promise<void> {
+  async connect(): Promise<void> {
     if (this.ws?.readyState === WebSocket.OPEN) return;
     
     if (this.connectionPromise) return this.connectionPromise;
@@ -127,7 +127,7 @@ export class WebSocketAdapter extends BaseAdapter {
     return this.sendMessage('shell:resize', { sessionId: processId, cols, rows });
   }
 
-  async getShellStatus(processId: string): Promise<{ running: boolean }> {
+  async getShellStatus(_processId: string): Promise<{ running: boolean }> {
     // WebSocket doesn't have a direct status check, assume running if we have a session
     return { running: true };
   }
@@ -179,7 +179,7 @@ export class WebSocketAdapter extends BaseAdapter {
     return [];
   }
 
-  async openInIDE(ideName: string, projectPath: string): Promise<{ success: boolean; error?: string }> {
+  async openInIDE(_ideName: string, _projectPath: string): Promise<{ success: boolean; error?: string }> {
     // Web client can't open local IDEs
     return { success: false, error: 'Cannot open IDE from web client' };
   }
