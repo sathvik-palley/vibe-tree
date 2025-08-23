@@ -4,15 +4,42 @@ import { TerminalView } from './components/TerminalView';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { useAppStore } from './store';
 import { useWebSocket } from './hooks/useWebSocket';
+import { Sun, Moon } from 'lucide-react';
 
 function App() {
-  const { selectedWorktree } = useAppStore();
+  const { selectedWorktree, theme, setTheme } = useAppStore();
   const { connect } = useWebSocket();
 
   useEffect(() => {
     // Auto-connect on mount
     connect();
   }, []);
+
+  useEffect(() => {
+    // Initialize theme from localStorage or system preference
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      setTheme(systemTheme);
+    }
+  }, [setTheme]);
+
+  useEffect(() => {
+    // Apply theme class to document
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -22,7 +49,20 @@ function App() {
           <h1 className="text-lg font-semibold">VibeTree</h1>
           <span className="text-xs text-muted-foreground hidden sm:inline">Web Terminal</span>
         </div>
-        <ConnectionStatus />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleTheme}
+            className="p-2 hover:bg-accent rounded-md transition-colors"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+          </button>
+          <ConnectionStatus />
+        </div>
       </header>
 
       {/* Main Content */}

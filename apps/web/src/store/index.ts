@@ -15,6 +15,9 @@ interface AppState {
   // Terminal state
   terminalSessions: Map<string, string>; // worktreePath -> sessionId
   
+  // Theme state
+  theme: 'light' | 'dark';
+  
   // Actions
   setConnected: (connected: boolean) => void;
   setConnecting: (connecting: boolean) => void;
@@ -24,6 +27,7 @@ interface AppState {
   setSelectedWorktree: (path: string | null) => void;
   addTerminalSession: (worktreePath: string, sessionId: string) => void;
   removeTerminalSession: (worktreePath: string) => void;
+  setTheme: (theme: 'light' | 'dark') => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -35,6 +39,7 @@ export const useAppStore = create<AppState>((set) => ({
   worktrees: [],
   selectedWorktree: null,
   terminalSessions: new Map(),
+  theme: 'light',
   
   // Actions
   setConnected: (connected) => set({ connected }),
@@ -55,4 +60,5 @@ export const useAppStore = create<AppState>((set) => ({
       sessions.delete(worktreePath);
       return { terminalSessions: sessions };
     }),
+  setTheme: (theme) => set({ theme }),
 }));
