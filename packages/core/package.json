@@ -1,0 +1,29 @@
+{
+  "name": "@vibetree/core",
+  "version": "0.0.1",
+  "description": "VibeTree Core - Shared business logic and types",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./dist/browser.mjs",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "node build.js",
+    "build:tsc": "tsc",
+    "dev": "tsc -w",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.5",
+    "esbuild": "^0.25.9",
+    "typescript": "^5.3.3"
+  }
+}

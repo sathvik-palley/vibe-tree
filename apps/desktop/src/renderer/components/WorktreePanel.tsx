@@ -180,14 +180,16 @@ export function WorktreePanel({ projectPath, selectedWorktree, onSelectWorktree,
                 <GitBranch className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{worktree.branch}</div>
-                  <div className="text-xs text-muted-foreground truncate">{worktree.path}</div>
+                  <div className="text-xs text-muted-foreground truncate">
+                    {worktree.path.replace('/Users/dots/Documents/projects/', '')}
+                  </div>
                 </div>
               </button>
               {worktrees.length > 1 && !worktree.branch.includes('main') && !worktree.branch.includes('master') && (
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 opacity-60 hover:opacity-100 group-hover:opacity-100 transition-opacity bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300"
+                  className="relative right-2 top-1/2 -translate-y-1/2 h-6 w-6 opacity-60 hover:opacity-100 group-hover:opacity-100 transition-opacity bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300"
                   onClick={(e) => handleDeleteWorktree(worktree, e)}
                 >
                   <Trash2 className="h-3 w-3 text-red-600" />
