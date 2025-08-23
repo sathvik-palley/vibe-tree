@@ -11,6 +11,12 @@
 
 ---
 
+> [!IMPORTANT]
+> 🚧 **Active Development Notice**: We're currently working on adding cloud support and multi-platform capabilities. 
+> For a stable desktop-only version, please use the [`release-v0.1`](https://github.com/sahithvibudhi/vibe-tree/tree/release-v0.1) branch.
+
+---
+
 VibeTree is a cross-platform application that enhances your development workflow by enabling parallel development with AI assistance across multiple git worktrees. Work on features simultaneously without context switching. Access from desktop, browser, or mobile devices.
 
 ## Screenshot
