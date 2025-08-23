@@ -1,6 +1,13 @@
 import { ipcMain } from 'electron';
-import * as crypto from 'crypto';
 import * as pty from 'node-pty';
+import { 
+  createPtyProcess, 
+  writeToPty, 
+  resizePty, 
+  generateSessionId,
+  onPtyData,
+  onPtyExit
+} from '@vibetree/core';
 
 interface ShellProcess {
   pty: pty.IPty;
@@ -39,8 +46,7 @@ class ShellProcessManager {
   }
 
   private getProcessId(worktreePath: string): string {
-    // Create deterministic ID based on worktree path
-    return crypto.createHash('sha256').update(worktreePath).digest('hex').substring(0, 16);
+    return generateSessionId(worktreePath);
   }
 
   private async startOrGetProcess(sender: Electron.WebContents, worktreePath: string, cols?: number, rows?: number) {
@@ -66,26 +72,15 @@ class ShellProcessManager {
       };
       
       // Attach new listener and store with disposable
-      const disposable = existingProcess.pty.onData(newListener);
+      const disposable = onPtyData(existingProcess.pty, newListener);
       existingProcess.listeners.set(listenerId, { handler: newListener, disposable });
       
       return { success: true, processId, isNew: false };
     }
 
     try {
-      // Determine shell based on platform
-      const shell = process.platform === 'win32' 
-        ? 'powershell.exe' 
-        : process.env.SHELL || '/bin/bash';
-
-      // Create PTY instance
-      const ptyProcess = pty.spawn(shell, [], {
-        name: 'xterm-256color',
-        cols: cols || 80,
-        rows: rows || 30,
-        cwd: worktreePath,
-        env: process.env
-      });
+      // Create PTY instance using core utility
+      const ptyProcess = createPtyProcess(worktreePath, cols, rows);
 
       // Create process with listeners map
       const shellProcess: ShellProcess = {
@@ -101,14 +96,14 @@ class ShellProcessManager {
         sender.send(`shell:output:${processId}`, data);
       };
       
-      const disposable = ptyProcess.onData(dataListener);
+      const disposable = onPtyData(ptyProcess, dataListener);
       shellProcess.listeners.set(listenerId, { handler: dataListener, disposable });
       
       this.processes.set(processId, shellProcess);
 
       // Handle PTY exit
-      ptyProcess.onExit((exitCode) => {
-        sender.send(`shell:exit:${processId}`, exitCode.exitCode);
+      onPtyExit(ptyProcess, (exitCode) => {
+        sender.send(`shell:exit:${processId}`, exitCode);
         this.processes.delete(processId);
       });
 
@@ -132,7 +127,7 @@ class ShellProcessManager {
     }
 
     try {
-      process.pty.write(data);
+      writeToPty(process.pty, data);
       return { success: true };
     } catch (error) {
       console.error(`Error writing to PTY ${processId}:`, error);
@@ -150,7 +145,7 @@ class ShellProcessManager {
     }
 
     try {
-      process.pty.resize(cols, rows);
+      resizePty(process.pty, cols, rows);
       return { success: true };
     } catch (error) {
       console.error(`Error resizing PTY ${processId}:`, error);

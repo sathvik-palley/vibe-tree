@@ -1,6 +1,7 @@
 import * as pty from 'node-pty';
 import { v4 as uuidv4 } from 'uuid';
 import { ShellStartResult, ShellWriteResult, ShellResizeResult } from '@vibetree/core';
+import { createPtyProcess, writeToPty, resizePty, onPtyExit } from '@vibetree/core';
 
 interface ShellSession {
   id: string;
@@ -23,17 +24,7 @@ export class ShellManager {
   async startShell(worktreePath: string, userId?: string, cols = 80, rows = 30): Promise<ShellStartResult> {
     try {
       const sessionId = uuidv4();
-      const shell = process.platform === 'win32' 
-        ? 'powershell.exe' 
-        : process.env.SHELL || '/bin/bash';
-
-      const ptyProcess = pty.spawn(shell, [], {
-        name: 'xterm-256color',
-        cols,
-        rows,
-        cwd: worktreePath,
-        env: process.env as Record<string, string>
-      });
+      const ptyProcess = createPtyProcess(worktreePath, cols, rows);
 
       const session: ShellSession = {
         id: sessionId,
@@ -46,7 +37,7 @@ export class ShellManager {
 
       this.sessions.set(sessionId, session);
 
-      ptyProcess.onExit(() => {
+      onPtyExit(ptyProcess, () => {
         this.sessions.delete(sessionId);
       });
 
@@ -70,7 +61,7 @@ export class ShellManager {
     }
 
     try {
-      session.pty.write(data);
+      writeToPty(session.pty, data);
       session.lastActivity = new Date();
       return { success: true };
     } catch (error) {
@@ -88,7 +79,7 @@ export class ShellManager {
     }
 
     try {
-      session.pty.resize(cols, rows);
+      resizePty(session.pty, cols, rows);
       session.lastActivity = new Date();
       return { success: true };
     } catch (error) {
