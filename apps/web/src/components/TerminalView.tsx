@@ -7,12 +7,15 @@ import type { Terminal as XTerm } from '@xterm/xterm';
 
 export function TerminalView() {
   const { 
-    selectedWorktree, 
+    getActiveProject,
     setSelectedWorktree,
     terminalSessions,
     addTerminalSession,
     removeTerminalSession
   } = useAppStore();
+  
+  const activeProject = getActiveProject();
+  const selectedWorktree = activeProject?.selectedWorktree;
   const { getAdapter } = useWebSocket();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -103,7 +106,9 @@ export function TerminalView() {
   };
 
   const handleBack = () => {
-    setSelectedWorktree(null);
+    if (activeProject) {
+      setSelectedWorktree(activeProject.id, null);
+    }
   };
 
   const toggleFullscreen = () => {

@@ -3,15 +3,23 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { ChevronLeft, GitBranch, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 
-export function WorktreePanel() {
+interface WorktreePanelProps {
+  projectId: string;
+}
+
+export function WorktreePanel({ projectId }: WorktreePanelProps) {
   const { 
-    worktrees, 
-    selectedWorktree, 
+    getProject,
+    updateProjectWorktrees,
     setSelectedWorktree,
-    projectPath,
-    setWorktrees,
     connected
   } = useAppStore();
+  
+  const project = getProject(projectId);
+  if (!project) {
+    return <div className="flex-1 flex items-center justify-center text-muted-foreground">Project not found</div>;
+  }
+
   const { getAdapter } = useWebSocket();
   const [loading, setLoading] = useState(false);
 
@@ -21,8 +29,8 @@ export function WorktreePanel() {
 
     setLoading(true);
     try {
-      const trees = await adapter.listWorktrees(projectPath);
-      setWorktrees(trees);
+      const trees = await adapter.listWorktrees(project.path);
+      updateProjectWorktrees(projectId, trees);
     } catch (error) {
       console.error('Failed to refresh worktrees:', error);
     } finally {
@@ -31,11 +39,11 @@ export function WorktreePanel() {
   };
 
   const handleSelectWorktree = (path: string) => {
-    setSelectedWorktree(path);
+    setSelectedWorktree(projectId, path);
   };
 
   const handleBack = () => {
-    setSelectedWorktree(null);
+    setSelectedWorktree(projectId, null);
   };
 
   return (
@@ -44,7 +52,7 @@ export function WorktreePanel() {
       <div className="h-14 px-4 border-b flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           {/* Back button on mobile when terminal is selected */}
-          {selectedWorktree && (
+          {project.selectedWorktree && (
             <button
               onClick={handleBack}
               className="md:hidden p-1 hover:bg-accent rounded"
@@ -65,7 +73,7 @@ export function WorktreePanel() {
 
       {/* Project Path */}
       <div className="px-4 py-2 border-b bg-muted/50">
-        <p className="text-xs text-muted-foreground truncate">{projectPath}</p>
+        <p className="text-xs text-muted-foreground truncate">{project.path}</p>
       </div>
 
       {/* Worktree List */}
@@ -74,20 +82,20 @@ export function WorktreePanel() {
           <div className="p-4 text-center text-muted-foreground">
             <p className="text-sm">Not connected to server</p>
           </div>
-        ) : worktrees.length === 0 ? (
+        ) : project.worktrees.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground">
             <p className="text-sm">No worktrees found</p>
             <p className="text-xs mt-2">Create worktrees in the desktop app</p>
           </div>
         ) : (
           <div className="p-2">
-            {worktrees.map((worktree) => (
+            {project.worktrees.map((worktree) => (
               <button
                 key={worktree.path}
                 onClick={() => handleSelectWorktree(worktree.path)}
                 className={`
                   w-full text-left p-3 rounded-md mb-1 transition-colors
-                  ${selectedWorktree === worktree.path 
+                  ${project.selectedWorktree === worktree.path 
                     ? 'bg-accent' 
                     : 'hover:bg-accent/50'
                   }

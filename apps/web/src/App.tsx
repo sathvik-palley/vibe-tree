@@ -3,7 +3,7 @@ import { WorktreePanel } from './components/WorktreePanel';
 import { TerminalView } from './components/TerminalView';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { ProjectSelector } from './components/ProjectSelector';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@vibetree/ui';
 import { useAppStore } from './store';
 import { useWebSocket } from './hooks/useWebSocket';
 import { Sun, Moon, Plus, X } from 'lucide-react';
