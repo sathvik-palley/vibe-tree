@@ -1,0 +1,308 @@
+import * as crypto from 'crypto';
+import { 
+  ShellStartResult, 
+  ShellWriteResult, 
+  ShellResizeResult 
+} from '../types';
+import {
+  getDefaultShell,
+  getPtyOptions,
+  writeToPty,
+  resizePty,
+  killPty,
+  onPtyData,
+  onPtyExit,
+  type IPty
+} from '../utils/shell';
+
+interface ShellSession {
+  id: string;
+  pty: IPty;
+  worktreePath: string;
+  createdAt: Date;
+  lastActivity: Date;
+  listeners: Map<string, (data: string) => void>;
+  exitListeners: Map<string, (code: number) => void>;
+}
+
+/**
+ * Unified shell session manager for all platforms
+ * Manages PTY sessions with shared state across desktop, server, and web
+ */
+export class ShellSessionManager {
+  private static instance: ShellSessionManager;
+  private sessions: Map<string, ShellSession> = new Map();
+  private sessionTimeoutMs = 30 * 60 * 1000; // 30 minutes
+  private cleanupInterval: NodeJS.Timeout | null = null;
+
+  private constructor() {
+    // Start cleanup timer
+    this.cleanupInterval = setInterval(() => this.cleanupInactiveSessions(), 60000);
+  }
+
+  /**
+   * Get singleton instance
+   */
+  static getInstance(): ShellSessionManager {
+    if (!ShellSessionManager.instance) {
+      ShellSessionManager.instance = new ShellSessionManager();
+    }
+    return ShellSessionManager.instance;
+  }
+
+  /**
+   * Generate deterministic session ID from worktree path
+   * This ensures same session is reused for same worktree
+   */
+  private generateSessionId(worktreePath: string): string {
+    return crypto.createHash('sha256')
+      .update(worktreePath)
+      .digest('hex')
+      .substring(0, 16);
+  }
+
+  /**
+   * Start or get existing shell session
+   */
+  async startSession(
+    worktreePath: string, 
+    cols = 80, 
+    rows = 30,
+    spawnFunction?: (shell: string, args: string[], options: any) => IPty
+  ): Promise<ShellStartResult> {
+    const sessionId = this.generateSessionId(worktreePath);
+    
+    // Return existing session if available
+    const existingSession = this.sessions.get(sessionId);
+    if (existingSession) {
+      existingSession.lastActivity = new Date();
+      return {
+        success: true,
+        processId: sessionId,
+        isNew: false
+      };
+    }
+
+    // Create new session
+    try {
+      if (!spawnFunction) {
+        throw new Error('Spawn function must be provided for new sessions');
+      }
+
+      const shell = getDefaultShell();
+      const options = getPtyOptions(worktreePath, cols, rows);
+      const ptyProcess = spawnFunction(shell, [], options);
+
+      const session: ShellSession = {
+        id: sessionId,
+        pty: ptyProcess,
+        worktreePath,
+        createdAt: new Date(),
+        lastActivity: new Date(),
+        listeners: new Map(),
+        exitListeners: new Map()
+      };
+
+      // Handle PTY exit
+      onPtyExit(ptyProcess, (exitCode) => {
+        // Notify all exit listeners
+        session.exitListeners.forEach(listener => listener(exitCode));
+        // Remove session
+        this.sessions.delete(sessionId);
+      });
+
+      this.sessions.set(sessionId, session);
+      
+      console.log(`Started PTY session ${sessionId} in ${worktreePath}`);
+      
+      return {
+        success: true,
+        processId: sessionId,
+        isNew: true
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to start shell'
+      };
+    }
+  }
+
+  /**
+   * Write data to shell session
+   */
+  async writeToSession(sessionId: string, data: string): Promise<ShellWriteResult> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return { success: false, error: 'Session not found' };
+    }
+
+    try {
+      writeToPty(session.pty, data);
+      session.lastActivity = new Date();
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to write to shell'
+      };
+    }
+  }
+
+  /**
+   * Resize shell session
+   */
+  async resizeSession(sessionId: string, cols: number, rows: number): Promise<ShellResizeResult> {
+    const session = this.sessions.get(sessionId);
+    if (!session) {
+      return { success: false, error: 'Session not found' };
+    }
+
+    try {
+      resizePty(session.pty, cols, rows);
+      session.lastActivity = new Date();
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to resize shell'
+      };
+    }
+  }
+
+  /**
+   * Add output listener for session
+   */
+  addOutputListener(sessionId: string, listenerId: string, callback: (data: string) => void): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session) return false;
+
+    // Remove old listener if exists
+    this.removeOutputListener(sessionId, listenerId);
+
+    // Add new listener
+    session.listeners.set(listenerId, callback);
+    
+    // Subscribe to PTY data if this is the first listener
+    if (session.listeners.size === 1) {
+      onPtyData(session.pty, (data) => {
+        session.listeners.forEach(listener => listener(data));
+      });
+    }
+
+    session.lastActivity = new Date();
+    return true;
+  }
+
+  /**
+   * Remove output listener
+   */
+  removeOutputListener(sessionId: string, listenerId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session) return false;
+
+    return session.listeners.delete(listenerId);
+  }
+
+  /**
+   * Add exit listener for session
+   */
+  addExitListener(sessionId: string, listenerId: string, callback: (code: number) => void): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session) return false;
+
+    session.exitListeners.set(listenerId, callback);
+    return true;
+  }
+
+  /**
+   * Remove exit listener
+   */
+  removeExitListener(sessionId: string, listenerId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session) return false;
+
+    return session.exitListeners.delete(listenerId);
+  }
+
+  /**
+   * Get session by ID
+   */
+  getSession(sessionId: string): ShellSession | undefined {
+    const session = this.sessions.get(sessionId);
+    if (session) {
+      session.lastActivity = new Date();
+    }
+    return session;
+  }
+
+  /**
+   * Get all sessions
+   */
+  getAllSessions(): ShellSession[] {
+    return Array.from(this.sessions.values());
+  }
+
+  /**
+   * Check if session exists
+   */
+  hasSession(sessionId: string): boolean {
+    return this.sessions.has(sessionId);
+  }
+
+  /**
+   * Terminate session
+   */
+  terminateSession(sessionId: string): boolean {
+    const session = this.sessions.get(sessionId);
+    if (!session) return false;
+
+    try {
+      // Clear listeners
+      session.listeners.clear();
+      session.exitListeners.clear();
+      
+      // Kill PTY
+      killPty(session.pty);
+      
+      // Remove from sessions
+      this.sessions.delete(sessionId);
+      
+      console.log(`Terminated session ${sessionId}`);
+      return true;
+    } catch (error) {
+      console.error('Error terminating session:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Clean up inactive sessions
+   */
+  private cleanupInactiveSessions(): void {
+    const now = new Date();
+    for (const [sessionId, session] of this.sessions) {
+      const inactiveTime = now.getTime() - session.lastActivity.getTime();
+      if (inactiveTime > this.sessionTimeoutMs) {
+        console.log(`Cleaning up inactive session: ${sessionId}`);
+        this.terminateSession(sessionId);
+      }
+    }
+  }
+
+  /**
+   * Cleanup all sessions (for app shutdown)
+   */
+  cleanup(): void {
+    // Stop cleanup timer
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+
+    // Terminate all sessions
+    for (const sessionId of this.sessions.keys()) {
+      this.terminateSession(sessionId);
+    }
+  }
+}

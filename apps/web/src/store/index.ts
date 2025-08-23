@@ -31,7 +31,7 @@ export const useAppStore = create<AppState>((set) => ({
   connected: false,
   connecting: false,
   error: null,
-  projectPath: '/Users/dots/Documents/projects/vibetree', // Default for testing
+  projectPath: import.meta.env.VITE_PROJECT_PATH || '', // Can be set via env
   worktrees: [],
   selectedWorktree: null,
   terminalSessions: new Map(),

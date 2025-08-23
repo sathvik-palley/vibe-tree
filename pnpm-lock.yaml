@@ -166,7 +166,7 @@ importers:
         specifier: ^1.1.0-beta34
         version: 1.1.0-beta9
       qrcode:
-        specifier: ^1.5.3
+        specifier: ^1.5.4
         version: 1.5.4
       uuid:
         specifier: ^9.0.1

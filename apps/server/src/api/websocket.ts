@@ -1,11 +1,17 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { ShellManager } from '../services/ShellManager';
-import { GitService } from '../services/GitService';
 import { AuthService } from '../auth/AuthService';
+import {
+  listWorktrees,
+  getGitStatus,
+  getGitDiff,
+  getGitDiffStaged,
+  addWorktree,
+  removeWorktree
+} from '@vibetree/core';
 
 interface Services {
   shellManager: ShellManager;
-  gitService: GitService;
   authService: AuthService;
 }
 
@@ -16,7 +22,7 @@ interface WSMessage {
 }
 
 export function setupWebSocketHandlers(wss: WebSocketServer, services: Services) {
-  const { shellManager, gitService, authService } = services;
+  const { shellManager, authService } = services;
 
   wss.on('connection', (ws: WebSocket, req) => {
     console.log('New WebSocket connection');
@@ -112,25 +118,23 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
             
             if (result.success && result.processId) {
               activeShellSessions.add(result.processId);
+              const connectionId = `ws-${Date.now()}`;
               
-              // Set up output forwarding
-              const session = shellManager.getSession(result.processId);
-              if (session) {
-                session.pty.onData((data) => {
-                  ws.send(JSON.stringify({
-                    type: 'shell:output',
-                    payload: { sessionId: result.processId, data }
-                  }));
-                });
-                
-                session.pty.onExit((exitCode) => {
-                  ws.send(JSON.stringify({
-                    type: 'shell:exit',
-                    payload: { sessionId: result.processId, code: exitCode.exitCode }
-                  }));
-                  activeShellSessions.delete(result.processId!);
-                });
-              }
+              // Set up output forwarding using the new listener methods
+              shellManager.addOutputListener(result.processId, connectionId, (data) => {
+                ws.send(JSON.stringify({
+                  type: 'shell:output',
+                  payload: { sessionId: result.processId, data }
+                }));
+              });
+              
+              shellManager.addExitListener(result.processId, connectionId, (exitCode) => {
+                ws.send(JSON.stringify({
+                  type: 'shell:exit',
+                  payload: { sessionId: result.processId, code: exitCode }
+                }));
+                activeShellSessions.delete(result.processId!);
+              });
             }
             
             ws.send(JSON.stringify({
@@ -170,7 +174,7 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
 
           case 'git:worktree:list': {
             try {
-              const worktrees = await gitService.listWorktrees(message.payload.projectPath);
+              const worktrees = await listWorktrees(message.payload.projectPath);
               ws.send(JSON.stringify({
                 type: 'git:worktree:list:response',
                 payload: worktrees,
@@ -188,7 +192,7 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
 
           case 'git:status': {
             try {
-              const status = await gitService.getStatus(message.payload.worktreePath);
+              const status = await getGitStatus(message.payload.worktreePath);
               ws.send(JSON.stringify({
                 type: 'git:status:response',
                 payload: status,
@@ -206,7 +210,7 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
 
           case 'git:diff': {
             try {
-              const diff = await gitService.getDiff(
+              const diff = await getGitDiff(
                 message.payload.worktreePath,
                 message.payload.filePath
               );
@@ -227,7 +231,7 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
 
           case 'git:worktree:add': {
             try {
-              const result = await gitService.addWorktree(
+              const result = await addWorktree(
                 message.payload.projectPath,
                 message.payload.branchName
               );
@@ -248,7 +252,7 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
 
           case 'git:worktree:remove': {
             try {
-              const result = await gitService.removeWorktree(
+              const result = await removeWorktree(
                 message.payload.projectPath,
                 message.payload.worktreePath,
                 message.payload.branchName

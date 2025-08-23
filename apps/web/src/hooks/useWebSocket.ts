@@ -9,6 +9,7 @@ export function useWebSocket() {
     setConnecting, 
     setError,
     setWorktrees,
+    setProjectPath,
     projectPath 
   } = useAppStore();
 
@@ -34,10 +35,23 @@ export function useWebSocket() {
       setConnected(true);
       setConnecting(false);
 
-      // Load initial worktrees
-      if (projectPath) {
+      // Get project path from server if not set
+      let finalProjectPath = projectPath;
+      if (!finalProjectPath) {
         try {
-          const worktrees = await adapter.listWorktrees(projectPath);
+          const response = await fetch('/api/config');
+          const config = await response.json();
+          finalProjectPath = config.projectPath;
+          setProjectPath(finalProjectPath);
+        } catch (err) {
+          console.error('Failed to get server config:', err);
+        }
+      }
+
+      // Load initial worktrees
+      if (finalProjectPath) {
+        try {
+          const worktrees = await adapter.listWorktrees(finalProjectPath);
           setWorktrees(worktrees);
         } catch (err) {
           console.error('Failed to load worktrees:', err);
@@ -48,7 +62,7 @@ export function useWebSocket() {
       setError(error instanceof Error ? error.message : 'Failed to connect');
       console.error('WebSocket connection failed:', error);
     }
-  }, [projectPath, setConnected, setConnecting, setError, setWorktrees]);
+  }, [projectPath, setConnected, setConnecting, setError, setWorktrees, setProjectPath]);
 
   const disconnect = useCallback(() => {
     if (adapterRef.current) {

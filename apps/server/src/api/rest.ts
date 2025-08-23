@@ -1,16 +1,29 @@
 import { Express } from 'express';
 import { ShellManager } from '../services/ShellManager';
-import { GitService } from '../services/GitService';
 import { AuthService } from '../auth/AuthService';
+import {
+  listWorktrees,
+  getGitStatus,
+  getGitDiff,
+  addWorktree,
+  removeWorktree
+} from '@vibetree/core';
 
 interface Services {
   shellManager: ShellManager;
-  gitService: GitService;
   authService: AuthService;
 }
 
 export function setupRestRoutes(app: Express, services: Services) {
-  const { shellManager, gitService, authService } = services;
+  const { shellManager, authService } = services;
+  
+  // Get server configuration
+  app.get('/api/config', (req, res) => {
+    res.json({
+      projectPath: process.env.PROJECT_PATH || process.cwd(),
+      version: '0.0.1'
+    });
+  });
 
   // Generate QR code for device pairing
   app.get('/api/auth/qr', async (req, res) => {
@@ -63,7 +76,7 @@ export function setupRestRoutes(app: Express, services: Services) {
   // Git operations (for non-WebSocket clients)
   app.post('/api/git/worktrees', async (req, res) => {
     try {
-      const worktrees = await gitService.listWorktrees(req.body.projectPath);
+      const worktrees = await listWorktrees(req.body.projectPath);
       res.json(worktrees);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
@@ -72,7 +85,7 @@ export function setupRestRoutes(app: Express, services: Services) {
 
   app.post('/api/git/status', async (req, res) => {
     try {
-      const status = await gitService.getStatus(req.body.worktreePath);
+      const status = await getGitStatus(req.body.worktreePath);
       res.json(status);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
@@ -81,7 +94,7 @@ export function setupRestRoutes(app: Express, services: Services) {
 
   app.post('/api/git/diff', async (req, res) => {
     try {
-      const diff = await gitService.getDiff(req.body.worktreePath, req.body.filePath);
+      const diff = await getGitDiff(req.body.worktreePath, req.body.filePath);
       res.json({ diff });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
@@ -90,7 +103,7 @@ export function setupRestRoutes(app: Express, services: Services) {
 
   app.post('/api/git/worktree/add', async (req, res) => {
     try {
-      const result = await gitService.addWorktree(req.body.projectPath, req.body.branchName);
+      const result = await addWorktree(req.body.projectPath, req.body.branchName);
       res.json(result);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
@@ -99,7 +112,7 @@ export function setupRestRoutes(app: Express, services: Services) {
 
   app.delete('/api/git/worktree', async (req, res) => {
     try {
-      const result = await gitService.removeWorktree(
+      const result = await removeWorktree(
         req.body.projectPath,
         req.body.worktreePath,
         req.body.branchName
