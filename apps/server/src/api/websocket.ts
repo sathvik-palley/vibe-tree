@@ -25,7 +25,7 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
   const { shellManager, authService } = services;
 
   wss.on('connection', (ws: WebSocket, req) => {
-    console.log('New WebSocket connection');
+    console.log('🔌 New WebSocket connection from:', req.headers.origin || 'unknown');
     
     let authenticated = false;
     let deviceId: string | null = null;
@@ -66,6 +66,34 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
         ws.send(JSON.stringify({
           type: 'auth:error',
           payload: { error: 'Invalid JWT' }
+        }));
+        ws.close();
+        return;
+      }
+    } else {
+      // No authentication provided - allow localhost for development
+      const isLocalhost = req.headers.host?.includes('localhost') || 
+                         req.headers.host?.includes('127.0.0.1');
+      
+      console.log('🔐 No auth provided, checking localhost:', { 
+        host: req.headers.host, 
+        isLocalhost, 
+        nodeEnv: process.env.NODE_ENV 
+      });
+      
+      if (isLocalhost && process.env.NODE_ENV !== 'production') {
+        authenticated = true;
+        deviceId = 'localhost-dev';
+        console.log('✅ Localhost authentication granted');
+        ws.send(JSON.stringify({
+          type: 'auth:success',
+          payload: { deviceId: 'localhost-dev' }
+        }));
+      } else {
+        console.log('❌ Authentication required, closing connection');
+        ws.send(JSON.stringify({
+          type: 'auth:error',
+          payload: { error: 'Authentication required' }
         }));
         ws.close();
         return;
@@ -173,14 +201,18 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
           }
 
           case 'git:worktree:list': {
+            console.log('🔍 Server: git:worktree:list request received:', message.payload);
             try {
               const worktrees = await listWorktrees(message.payload.projectPath);
+              console.log('🔍 Server: worktrees found:', worktrees);
               ws.send(JSON.stringify({
                 type: 'git:worktree:list:response',
                 payload: worktrees,
                 id: message.id
               }));
+              console.log('🔍 Server: response sent');
             } catch (error) {
+              console.error('🔍 Server: error loading worktrees:', error);
               ws.send(JSON.stringify({
                 type: 'error',
                 payload: { error: (error as Error).message },
@@ -217,6 +249,27 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
               ws.send(JSON.stringify({
                 type: 'git:diff:response',
                 payload: diff,
+                id: message.id
+              }));
+            } catch (error) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { error: (error as Error).message },
+                id: message.id
+              }));
+            }
+            break;
+          }
+
+          case 'git:diff:staged': {
+            try {
+              const diff = await getGitDiffStaged(
+                message.payload.worktreePath,
+                message.payload.filePath
+              );
+              ws.send(JSON.stringify({
+                type: 'git:diff:staged:response',
+                payload: { diff },
                 id: message.id
               }));
             } catch (error) {
@@ -288,8 +341,8 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
       }
     });
 
-    ws.on('close', () => {
-      console.log('WebSocket connection closed');
+    ws.on('close', (code, reason) => {
+      console.log('💔 WebSocket connection closed:', { code, reason: reason.toString(), authenticated, deviceId });
       // Clean up any active shell sessions
       for (const sessionId of activeShellSessions) {
         shellManager.terminateSession(sessionId);

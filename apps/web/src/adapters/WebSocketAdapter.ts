@@ -16,9 +16,11 @@ export class WebSocketAdapter extends BaseAdapter {
   private eventHandlers: Map<string, Set<(data: any) => void>> = new Map();
   private messageId = 0;
   private connectionPromise: Promise<void> | null = null;
+  private onDisconnect?: () => void;
 
-  constructor(private wsUrl: string, private jwt?: string) {
+  constructor(private wsUrl: string, private jwt?: string, onDisconnect?: () => void) {
     super();
+    this.onDisconnect = onDisconnect;
   }
 
   async connect(): Promise<void> {
@@ -62,8 +64,11 @@ export class WebSocketAdapter extends BaseAdapter {
       };
 
       this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
+        console.log('💔 WebSocket disconnected');
         this.connectionPromise = null;
+        
+        // Notify about disconnect (will add callback for this)
+        this.onDisconnect?.();
       };
     });
 
@@ -71,24 +76,32 @@ export class WebSocketAdapter extends BaseAdapter {
   }
 
   private async sendMessage<T>(type: string, payload: any): Promise<T> {
+    console.log('📤 Sending WebSocket message:', { type, payload });
     await this.connect();
     
     return new Promise((resolve, reject) => {
       const id = (++this.messageId).toString();
+      console.log('📤 Message ID:', id);
       
       this.messageHandlers.set(id, (data) => {
+        console.log('📥 Received response for message:', id, data);
         if (data.error) {
+          console.error('📥 Message error:', data.error);
           reject(new Error(data.error));
         } else {
+          console.log('📥 Message success:', data);
           resolve(data);
         }
       });
       
-      this.ws!.send(JSON.stringify({ type, payload, id }));
+      const message = { type, payload, id };
+      console.log('📤 Sending message:', message);
+      this.ws!.send(JSON.stringify(message));
       
       // Timeout after 30 seconds
       setTimeout(() => {
         if (this.messageHandlers.has(id)) {
+          console.error('⏰ Request timeout for message:', id);
           this.messageHandlers.delete(id);
           reject(new Error('Request timeout'));
         }
@@ -149,7 +162,15 @@ export class WebSocketAdapter extends BaseAdapter {
   }
 
   async listWorktrees(projectPath: string): Promise<Worktree[]> {
-    return this.sendMessage('git:worktree:list', { projectPath });
+    console.log('🌐 WebSocketAdapter.listWorktrees called with:', projectPath);
+    try {
+      const result = await this.sendMessage('git:worktree:list', { projectPath });
+      console.log('🌐 WebSocketAdapter.listWorktrees result:', result);
+      return result;
+    } catch (error) {
+      console.error('🌐 WebSocketAdapter.listWorktrees error:', error);
+      throw error;
+    }
   }
 
   async getGitStatus(worktreePath: string): Promise<GitStatus[]> {

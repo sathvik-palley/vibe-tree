@@ -1,7 +1,7 @@
 import { useAppStore } from '../store';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { ChevronLeft, GitBranch, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface WorktreePanelProps {
   projectId: string;
@@ -15,17 +15,15 @@ export function WorktreePanel({ projectId }: WorktreePanelProps) {
     connected
   } = useAppStore();
   
-  const project = getProject(projectId);
-  if (!project) {
-    return <div className="flex-1 flex items-center justify-center text-muted-foreground">Project not found</div>;
-  }
-
   const { getAdapter } = useWebSocket();
   const [loading, setLoading] = useState(false);
+  
+  const project = getProject(projectId);
+  const adapter = getAdapter(); // Get adapter once per render
 
   const handleRefresh = async () => {
     const adapter = getAdapter();
-    if (!adapter || !connected) return;
+    if (!adapter || !connected || !project || loading) return;
 
     setLoading(true);
     try {
@@ -45,6 +43,53 @@ export function WorktreePanel({ projectId }: WorktreePanelProps) {
   const handleBack = () => {
     setSelectedWorktree(projectId, null);
   };
+
+  // Auto-load worktrees when component mounts or project changes
+  useEffect(() => {
+    console.log('🔄 WorktreePanel useEffect triggered:', { 
+      projectId, 
+      connected, 
+      loading,
+      hasProject: !!project,
+      hasAdapter: !!adapter,
+      projectPath: project?.path,
+      currentWorktrees: project?.worktrees?.length || 0
+    });
+    
+    if (!project || !connected || loading || !adapter) {
+      console.log('❌ Early return from useEffect:', { 
+        hasProject: !!project, 
+        connected, 
+        loading,
+        hasAdapter: !!adapter
+      });
+      return;
+    }
+    
+    // Inline refresh logic with stable dependencies
+    const loadWorktrees = async () => {
+      console.log('🚀 Starting worktree load for:', project.path);
+      setLoading(true);
+      
+      try {
+        const trees = await adapter.listWorktrees(project.path);
+        console.log('✅ Worktrees loaded:', trees);
+        updateProjectWorktrees(projectId, trees);
+        console.log('✅ Project worktrees updated');
+      } catch (error) {
+        console.error('❌ Failed to load worktrees:', error);
+      } finally {
+        setLoading(false);
+        console.log('🏁 Loading finished');
+      }
+    };
+    
+    loadWorktrees();
+  }, [projectId, connected, adapter?.constructor?.name]); // Stable dependency on adapter presence
+  
+  if (!project) {
+    return <div className="flex-1 flex items-center justify-center text-muted-foreground">Project not found</div>;
+  }
 
   return (
     <div className="flex flex-col h-full w-full">
