@@ -4,7 +4,8 @@ import App from './App';
 import './styles/globals.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
+  // Temporarily disable StrictMode to fix terminal character duplication
+  // <React.StrictMode>
     <App />
-  </React.StrictMode>
+  // </React.StrictMode>
 );

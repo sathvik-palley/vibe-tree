@@ -75,22 +75,14 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
       const isLocalhost = req.headers.host?.includes('localhost') || 
                          req.headers.host?.includes('127.0.0.1');
       
-      console.log('🔐 No auth provided, checking localhost:', { 
-        host: req.headers.host, 
-        isLocalhost, 
-        nodeEnv: process.env.NODE_ENV 
-      });
-      
       if (isLocalhost && process.env.NODE_ENV !== 'production') {
         authenticated = true;
         deviceId = 'localhost-dev';
-        console.log('✅ Localhost authentication granted');
         ws.send(JSON.stringify({
           type: 'auth:success',
           payload: { deviceId: 'localhost-dev' }
         }));
       } else {
-        console.log('❌ Authentication required, closing connection');
         ws.send(JSON.stringify({
           type: 'auth:error',
           payload: { error: 'Authentication required' }
@@ -149,6 +141,7 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
               const connectionId = `ws-${Date.now()}`;
               
               // Set up output forwarding using the new listener methods
+              // This works for both new and existing sessions
               shellManager.addOutputListener(result.processId, connectionId, (data) => {
                 ws.send(JSON.stringify({
                   type: 'shell:output',
@@ -201,18 +194,14 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
           }
 
           case 'git:worktree:list': {
-            console.log('🔍 Server: git:worktree:list request received:', message.payload);
             try {
               const worktrees = await listWorktrees(message.payload.projectPath);
-              console.log('🔍 Server: worktrees found:', worktrees);
               ws.send(JSON.stringify({
                 type: 'git:worktree:list:response',
                 payload: worktrees,
                 id: message.id
               }));
-              console.log('🔍 Server: response sent');
             } catch (error) {
-              console.error('🔍 Server: error loading worktrees:', error);
               ws.send(JSON.stringify({
                 type: 'error',
                 payload: { error: (error as Error).message },

@@ -56,7 +56,9 @@ export class WebSocketAdapter extends BaseAdapter {
           // Handle event messages
           if (message.type && this.eventHandlers.has(message.type)) {
             const handlers = this.eventHandlers.get(message.type)!;
-            handlers.forEach(handler => handler(message.payload));
+            handlers.forEach(handler => {
+              handler(message.payload);
+            });
           }
         } catch (error) {
           console.error('Failed to parse WebSocket message:', error);
@@ -76,32 +78,25 @@ export class WebSocketAdapter extends BaseAdapter {
   }
 
   private async sendMessage<T>(type: string, payload: any): Promise<T> {
-    console.log('📤 Sending WebSocket message:', { type, payload });
     await this.connect();
     
     return new Promise((resolve, reject) => {
       const id = (++this.messageId).toString();
-      console.log('📤 Message ID:', id);
       
       this.messageHandlers.set(id, (data) => {
-        console.log('📥 Received response for message:', id, data);
         if (data.error) {
-          console.error('📥 Message error:', data.error);
           reject(new Error(data.error));
         } else {
-          console.log('📥 Message success:', data);
           resolve(data);
         }
       });
       
       const message = { type, payload, id };
-      console.log('📤 Sending message:', message);
       this.ws!.send(JSON.stringify(message));
       
       // Timeout after 30 seconds
       setTimeout(() => {
         if (this.messageHandlers.has(id)) {
-          console.error('⏰ Request timeout for message:', id);
           this.messageHandlers.delete(id);
           reject(new Error('Request timeout'));
         }
@@ -162,15 +157,7 @@ export class WebSocketAdapter extends BaseAdapter {
   }
 
   async listWorktrees(projectPath: string): Promise<Worktree[]> {
-    console.log('🌐 WebSocketAdapter.listWorktrees called with:', projectPath);
-    try {
-      const result = await this.sendMessage('git:worktree:list', { projectPath });
-      console.log('🌐 WebSocketAdapter.listWorktrees result:', result);
-      return result;
-    } catch (error) {
-      console.error('🌐 WebSocketAdapter.listWorktrees error:', error);
-      throw error;
-    }
+    return this.sendMessage('git:worktree:list', { projectPath });
   }
 
   async getGitStatus(worktreePath: string): Promise<GitStatus[]> {

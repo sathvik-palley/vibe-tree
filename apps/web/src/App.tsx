@@ -149,9 +149,9 @@ function App() {
           <TabsContent 
             key={project.id} 
             value={project.id}
-            className="flex-1 m-0 h-full"
+            className="flex-1 m-0 h-0"
           >
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex h-full overflow-hidden">
               {/* Mobile: Show either panel or terminal based on selection */}
               {/* Desktop: Show both side by side */}
               <div className="flex w-full">
@@ -165,7 +165,7 @@ function App() {
 
                 {/* Terminal View - Hidden on mobile when no worktree selected */}
                 {project.selectedWorktree && (
-                  <div className="flex-1 flex">
+                  <div className="flex-1 flex h-full">
                     <TerminalView />
                   </div>
                 )}
