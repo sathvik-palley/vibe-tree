@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { WorktreePanel } from './components/WorktreePanel';
 import { TerminalView } from './components/TerminalView';
+import { GitDiffView } from './components/GitDiffView';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { ProjectSelector } from './components/ProjectSelector';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@vibetree/ui';
 import { useAppStore } from './store';
 import { useWebSocket } from './hooks/useWebSocket';
-import { Sun, Moon, Plus, X } from 'lucide-react';
+import { Sun, Moon, Plus, X, Terminal, GitBranch } from 'lucide-react';
 
 function App() {
-  const { projects, activeProjectId, addProject, removeProject, setActiveProject, getActiveProject, theme, setTheme } = useAppStore();
+  const { projects, activeProjectId, addProject, removeProject, setActiveProject, getActiveProject, setSelectedTab, theme, setTheme } = useAppStore();
   const { connect } = useWebSocket();
   const [showProjectSelector, setShowProjectSelector] = useState(false);
   
@@ -152,34 +153,67 @@ function App() {
             className="flex-1 m-0 h-0"
           >
             <div className="flex h-full overflow-hidden">
-              {/* Mobile: Show either panel or terminal based on selection */}
-              {/* Desktop: Show both side by side */}
-              <div className="flex w-full">
-                {/* Worktree Panel - Hidden on mobile when terminal is selected */}
-                <div className={`
-                  ${project.selectedWorktree ? 'hidden md:flex' : 'flex'} 
-                  w-full md:w-80 border-r flex-shrink-0
-                `}>
-                  <WorktreePanel projectId={project.id} />
-                </div>
+              {/* Worktree Panel - Always visible on desktop, conditional on mobile */}
+              <div className={`
+                ${project.selectedWorktree ? 'hidden md:flex' : 'flex'} 
+                w-full md:w-80 border-r flex-shrink-0
+              `}>
+                <WorktreePanel projectId={project.id} />
+              </div>
 
-                {/* Terminal View - Hidden on mobile when no worktree selected */}
-                {project.selectedWorktree && (
-                  <div className="flex-1 flex h-full">
-                    <TerminalView />
-                  </div>
-                )}
-
-                {/* Empty state for desktop when no worktree selected */}
-                {!project.selectedWorktree && (
-                  <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground">
-                    <div className="text-center">
-                      <p className="text-lg mb-2">Select a worktree to start</p>
-                      <p className="text-sm">Choose from the panel on the left</p>
+              {/* Main Content Area with Tabs - Only shown when worktree is selected */}
+              {project.selectedWorktree ? (
+                <div className="flex-1 flex flex-col h-full">
+                  {/* Tab Navigation */}
+                  <div className="h-10 border-b flex items-center px-2 bg-muted/30 flex-shrink-0">
+                    <div className="flex">
+                      <button
+                        className={`px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5 ${
+                          project.selectedTab === 'terminal'
+                            ? 'bg-background text-foreground border shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                        }`}
+                        onClick={() => setSelectedTab(project.id, 'terminal')}
+                      >
+                        <Terminal className="h-3.5 w-3.5" />
+                        Terminal
+                      </button>
+                      <button
+                        className={`px-3 py-1.5 text-sm rounded-md transition-colors flex items-center gap-1.5 ml-1 ${
+                          project.selectedTab === 'changes'
+                            ? 'bg-background text-foreground border shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                        }`}
+                        onClick={() => setSelectedTab(project.id, 'changes')}
+                      >
+                        <GitBranch className="h-3.5 w-3.5" />
+                        Changes
+                      </button>
                     </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Tab Content */}
+                  <div className="flex-1 overflow-hidden relative">
+                    {/* Keep TerminalView mounted but hidden to preserve history */}
+                    <div className={`absolute inset-0 ${project.selectedTab === 'terminal' ? 'block' : 'hidden'}`}>
+                      <TerminalView />
+                    </div>
+                    
+                    {/* Keep GitDiffView mounted but hidden to preserve state */}
+                    <div className={`absolute inset-0 ${project.selectedTab === 'changes' ? 'block' : 'hidden'}`}>
+                      <GitDiffView worktreePath={project.selectedWorktree} theme={theme} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Empty state when no worktree selected */
+                <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <p className="text-lg mb-2">Select a worktree to start</p>
+                    <p className="text-sm">Choose from the panel on the left</p>
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
         ))}

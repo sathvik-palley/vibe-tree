@@ -7,6 +7,7 @@ interface Project {
   name: string;
   worktrees: Worktree[];
   selectedWorktree: string | null;
+  selectedTab: 'terminal' | 'changes';
 }
 
 interface AppState {
@@ -34,6 +35,7 @@ interface AppState {
   setActiveProject: (id: string) => void;
   updateProjectWorktrees: (id: string, worktrees: Worktree[]) => void;
   setSelectedWorktree: (projectId: string, worktreePath: string | null) => void;
+  setSelectedTab: (projectId: string, tab: 'terminal' | 'changes') => void;
   getProject: (id: string) => Project | undefined;
   getActiveProject: () => Project | undefined;
   addTerminalSession: (worktreePath: string, sessionId: string) => void;
@@ -73,7 +75,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       path,
       name,
       worktrees: [],
-      selectedWorktree: null
+      selectedWorktree: null,
+      selectedTab: 'terminal'
     };
 
     set((state) => ({
@@ -107,6 +110,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       projects: state.projects.map(project =>
         project.id === projectId 
           ? { ...project, selectedWorktree: worktreePath }
+          : project
+      )
+    }));
+  },
+
+  setSelectedTab: (projectId: string, tab: 'terminal' | 'changes') => {
+    set((state) => ({
+      projects: state.projects.map(project =>
+        project.id === projectId 
+          ? { ...project, selectedTab: tab }
           : project
       )
     }));

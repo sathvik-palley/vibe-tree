@@ -237,7 +237,7 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
               );
               ws.send(JSON.stringify({
                 type: 'git:diff:response',
-                payload: diff,
+                payload: { diff },
                 id: message.id
               }));
             } catch (error) {
