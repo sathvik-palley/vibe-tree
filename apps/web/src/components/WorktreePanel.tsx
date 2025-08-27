@@ -1,28 +1,34 @@
 import { useAppStore } from '../store';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { ChevronLeft, GitBranch, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
-export function WorktreePanel() {
+interface WorktreePanelProps {
+  projectId: string;
+}
+
+export function WorktreePanel({ projectId }: WorktreePanelProps) {
   const { 
-    worktrees, 
-    selectedWorktree, 
+    getProject,
+    updateProjectWorktrees,
     setSelectedWorktree,
-    projectPath,
-    setWorktrees,
     connected
   } = useAppStore();
+  
   const { getAdapter } = useWebSocket();
   const [loading, setLoading] = useState(false);
+  
+  const project = getProject(projectId);
+  const adapter = getAdapter(); // Get adapter once per render
 
   const handleRefresh = async () => {
     const adapter = getAdapter();
-    if (!adapter || !connected) return;
+    if (!adapter || !connected || !project || loading) return;
 
     setLoading(true);
     try {
-      const trees = await adapter.listWorktrees(projectPath);
-      setWorktrees(trees);
+      const trees = await adapter.listWorktrees(project.path);
+      updateProjectWorktrees(projectId, trees);
     } catch (error) {
       console.error('Failed to refresh worktrees:', error);
     } finally {
@@ -31,12 +37,59 @@ export function WorktreePanel() {
   };
 
   const handleSelectWorktree = (path: string) => {
-    setSelectedWorktree(path);
+    setSelectedWorktree(projectId, path);
   };
 
   const handleBack = () => {
-    setSelectedWorktree(null);
+    setSelectedWorktree(projectId, null);
   };
+
+  // Auto-load worktrees when component mounts or project changes
+  useEffect(() => {
+    console.log('🔄 WorktreePanel useEffect triggered:', { 
+      projectId, 
+      connected, 
+      loading,
+      hasProject: !!project,
+      hasAdapter: !!adapter,
+      projectPath: project?.path,
+      currentWorktrees: project?.worktrees?.length || 0
+    });
+    
+    if (!project || !connected || loading || !adapter) {
+      console.log('❌ Early return from useEffect:', { 
+        hasProject: !!project, 
+        connected, 
+        loading,
+        hasAdapter: !!adapter
+      });
+      return;
+    }
+    
+    // Inline refresh logic with stable dependencies
+    const loadWorktrees = async () => {
+      console.log('🚀 Starting worktree load for:', project.path);
+      setLoading(true);
+      
+      try {
+        const trees = await adapter.listWorktrees(project.path);
+        console.log('✅ Worktrees loaded:', trees);
+        updateProjectWorktrees(projectId, trees);
+        console.log('✅ Project worktrees updated');
+      } catch (error) {
+        console.error('❌ Failed to load worktrees:', error);
+      } finally {
+        setLoading(false);
+        console.log('🏁 Loading finished');
+      }
+    };
+    
+    loadWorktrees();
+  }, [projectId, connected, adapter?.constructor?.name]); // Stable dependency on adapter presence
+  
+  if (!project) {
+    return <div className="flex-1 flex items-center justify-center text-muted-foreground">Project not found</div>;
+  }
 
   return (
     <div className="flex flex-col h-full w-full">
@@ -44,7 +97,7 @@ export function WorktreePanel() {
       <div className="h-14 px-4 border-b flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           {/* Back button on mobile when terminal is selected */}
-          {selectedWorktree && (
+          {project.selectedWorktree && (
             <button
               onClick={handleBack}
               className="md:hidden p-1 hover:bg-accent rounded"
@@ -65,7 +118,7 @@ export function WorktreePanel() {
 
       {/* Project Path */}
       <div className="px-4 py-2 border-b bg-muted/50">
-        <p className="text-xs text-muted-foreground truncate">{projectPath}</p>
+        <p className="text-xs text-muted-foreground truncate">{project.path}</p>
       </div>
 
       {/* Worktree List */}
@@ -74,20 +127,20 @@ export function WorktreePanel() {
           <div className="p-4 text-center text-muted-foreground">
             <p className="text-sm">Not connected to server</p>
           </div>
-        ) : worktrees.length === 0 ? (
+        ) : project.worktrees.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground">
             <p className="text-sm">No worktrees found</p>
             <p className="text-xs mt-2">Create worktrees in the desktop app</p>
           </div>
         ) : (
           <div className="p-2">
-            {worktrees.map((worktree) => (
+            {project.worktrees.map((worktree) => (
               <button
                 key={worktree.path}
                 onClick={() => handleSelectWorktree(worktree.path)}
                 className={`
                   w-full text-left p-3 rounded-md mb-1 transition-colors
-                  ${selectedWorktree === worktree.path 
+                  ${project.selectedWorktree === worktree.path 
                     ? 'bg-accent' 
                     : 'hover:bg-accent/50'
                   }

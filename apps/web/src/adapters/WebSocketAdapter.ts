@@ -16,9 +16,11 @@ export class WebSocketAdapter extends BaseAdapter {
   private eventHandlers: Map<string, Set<(data: any) => void>> = new Map();
   private messageId = 0;
   private connectionPromise: Promise<void> | null = null;
+  private onDisconnect?: () => void;
 
-  constructor(private wsUrl: string, private jwt?: string) {
+  constructor(private wsUrl: string, private jwt?: string, onDisconnect?: () => void) {
     super();
+    this.onDisconnect = onDisconnect;
   }
 
   async connect(): Promise<void> {
@@ -54,7 +56,9 @@ export class WebSocketAdapter extends BaseAdapter {
           // Handle event messages
           if (message.type && this.eventHandlers.has(message.type)) {
             const handlers = this.eventHandlers.get(message.type)!;
-            handlers.forEach(handler => handler(message.payload));
+            handlers.forEach(handler => {
+              handler(message.payload);
+            });
           }
         } catch (error) {
           console.error('Failed to parse WebSocket message:', error);
@@ -62,8 +66,11 @@ export class WebSocketAdapter extends BaseAdapter {
       };
 
       this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
+        console.log('💔 WebSocket disconnected');
         this.connectionPromise = null;
+        
+        // Notify about disconnect (will add callback for this)
+        this.onDisconnect?.();
       };
     });
 
@@ -84,7 +91,8 @@ export class WebSocketAdapter extends BaseAdapter {
         }
       });
       
-      this.ws!.send(JSON.stringify({ type, payload, id }));
+      const message = { type, payload, id };
+      this.ws!.send(JSON.stringify(message));
       
       // Timeout after 30 seconds
       setTimeout(() => {

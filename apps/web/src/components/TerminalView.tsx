@@ -7,12 +7,15 @@ import type { Terminal as XTerm } from '@xterm/xterm';
 
 export function TerminalView() {
   const { 
-    selectedWorktree, 
+    getActiveProject,
     setSelectedWorktree,
     terminalSessions,
     addTerminalSession,
     removeTerminalSession
   } = useAppStore();
+  
+  const activeProject = getActiveProject();
+  const selectedWorktree = activeProject?.selectedWorktree;
   const { getAdapter } = useWebSocket();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -20,14 +23,34 @@ export function TerminalView() {
   const cleanupRef = useRef<(() => void)[]>([]);
 
   useEffect(() => {
-    if (!selectedWorktree) return;
+    if (!selectedWorktree) {
+      return;
+    }
 
     const adapter = getAdapter();
-    if (!adapter) return;
+    if (!adapter) {
+      return;
+    }
 
     // Check if we already have a session for this worktree
     const existingSessionId = terminalSessions.get(selectedWorktree);
     if (existingSessionId) {
+      // Set up event listeners for existing session
+      const unsubscribeOutput = adapter.onShellOutput(existingSessionId, (data) => {
+        if (terminalRef.current) {
+          terminalRef.current.write(data);
+        }
+      });
+
+      const unsubscribeExit = adapter.onShellExit(existingSessionId, (code) => {
+        if (terminalRef.current) {
+          terminalRef.current.write(`\r\n[Process exited with code ${code}]\r\n`);
+        }
+        removeTerminalSession(selectedWorktree);
+        setSessionId(null);
+      });
+
+      cleanupRef.current = [unsubscribeOutput, unsubscribeExit];
       setSessionId(existingSessionId);
       return;
     }
@@ -35,31 +58,54 @@ export function TerminalView() {
     // Start new shell session
     const startSession = async () => {
       try {
+        // First, get or create a deterministic session ID for this worktree
+        // This matches the server's generateSessionId logic
+        const encoder = new TextEncoder();
+        const data = encoder.encode(selectedWorktree);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        const expectedSessionId = hashHex.substring(0, 16);
+        
+        // Set up event listeners FIRST, before starting shell
+        // This prevents race condition where shell output arrives before listeners are registered
+        const unsubscribeOutput = adapter.onShellOutput(expectedSessionId, (data) => {
+          if (terminalRef.current) {
+            terminalRef.current.write(data);
+          }
+        });
+
+        const unsubscribeExit = adapter.onShellExit(expectedSessionId, (code) => {
+          if (terminalRef.current) {
+            terminalRef.current.write(`\r\n[Process exited with code ${code}]\r\n`);
+          }
+          removeTerminalSession(selectedWorktree);
+          setSessionId(null);
+        });
+
+        // Store cleanup functions immediately
+        cleanupRef.current = [unsubscribeOutput, unsubscribeExit];
+        
+        // Set session ID immediately so terminal component can render
+        setSessionId(expectedSessionId);
+        
+        // NOW start the shell session - listeners are already in place
         const result = await adapter.startShell(selectedWorktree);
+        
         if (result.success && result.processId) {
-          setSessionId(result.processId);
           addTerminalSession(selectedWorktree, result.processId);
-
-          // Set up output listener
-          const unsubscribeOutput = adapter.onShellOutput(result.processId, (data) => {
-            if (terminalRef.current) {
-              terminalRef.current.write(data);
-            }
-          });
-
-          // Set up exit listener
-          const unsubscribeExit = adapter.onShellExit(result.processId, (code) => {
-            if (terminalRef.current) {
-              terminalRef.current.write(`\r\n[Process exited with code ${code}]\r\n`);
-            }
-            removeTerminalSession(selectedWorktree);
-            setSessionId(null);
-          });
-
-          cleanupRef.current = [unsubscribeOutput, unsubscribeExit];
+        } else {
+          // Clean up listeners if session failed
+          cleanupRef.current.forEach(cleanup => cleanup());
+          cleanupRef.current = [];
+          setSessionId(null);
         }
       } catch (error) {
         console.error('Failed to start shell session:', error);
+        // Clean up listeners on error
+        cleanupRef.current.forEach(cleanup => cleanup());
+        cleanupRef.current = [];
+        setSessionId(null);
       }
     };
 
@@ -73,10 +119,14 @@ export function TerminalView() {
   }, [selectedWorktree, getAdapter, terminalSessions, addTerminalSession, removeTerminalSession]);
 
   const handleTerminalData = async (data: string) => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      return;
+    }
     
     const adapter = getAdapter();
-    if (!adapter) return;
+    if (!adapter) {
+      return;
+    }
 
     try {
       await adapter.writeToShell(sessionId, data);
@@ -103,7 +153,9 @@ export function TerminalView() {
   };
 
   const handleBack = () => {
-    setSelectedWorktree(null);
+    if (activeProject) {
+      setSelectedWorktree(activeProject.id, null);
+    }
   };
 
   const toggleFullscreen = () => {

@@ -1,21 +1,28 @@
-import { useRef, useCallback } from 'react';
-import { WebSocketAdapter } from '../adapters/WebSocketAdapter';
+import { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from '../store';
+import { 
+  connectGlobalAdapter, 
+  disconnectGlobalAdapter, 
+  getGlobalAdapter, 
+  isConnected,
+  onGlobalAdapterConnected,
+  onGlobalAdapterDisconnected
+} from '../adapters/globalWebSocketAdapter';
 
 export function useWebSocket() {
-  const adapterRef = useRef<WebSocketAdapter | null>(null);
   const { 
     setConnected, 
     setConnecting, 
-    setError,
-    setWorktrees,
-    setProjectPath,
-    projectPath 
+    setError
   } = useAppStore();
 
+  // Local state to force re-renders when adapter changes
+  const [adapterVersion, setAdapterVersion] = useState(0);
+
   const connect = useCallback(async () => {
-    if (adapterRef.current) {
-      return; // Already connected
+    if (isConnected()) {
+      console.log('🔌 Already connected to global adapter');
+      return;
     }
 
     setConnecting(true);
@@ -39,62 +46,51 @@ export function useWebSocket() {
         }
       }
       
-      console.log('Connecting to WebSocket:', wsUrl);
-      
-      // Create adapter (without JWT for now - will add auth later)
-      const adapter = new WebSocketAdapter(wsUrl);
-      adapterRef.current = adapter;
-
-      // Wait for connection
-      await adapter.connect();
+      await connectGlobalAdapter(wsUrl);
       
       setConnected(true);
       setConnecting(false);
+      setAdapterVersion(prev => prev + 1); // Force re-render
 
-      // Get project path from server if not set
-      let finalProjectPath = projectPath;
-      if (!finalProjectPath) {
-        try {
-          // Use the same host logic for API calls
-          const isLocalhost = window.location.hostname === 'localhost' || 
-                            window.location.hostname === '127.0.0.1';
-          const apiHost = isLocalhost ? 'http://localhost:3002' : `http://${window.location.hostname}:3002`;
-          const response = await fetch(`${apiHost}/api/config`);
-          const config = await response.json();
-          finalProjectPath = config.projectPath;
-          setProjectPath(finalProjectPath);
-        } catch (err) {
-          console.error('Failed to get server config:', err);
-        }
-      }
-
-      // Load initial worktrees
-      if (finalProjectPath) {
-        try {
-          const worktrees = await adapter.listWorktrees(finalProjectPath);
-          setWorktrees(worktrees);
-        } catch (err) {
-          console.error('Failed to load worktrees:', err);
-        }
-      }
     } catch (error) {
       setConnecting(false);
       setError(error instanceof Error ? error.message : 'Failed to connect');
       console.error('WebSocket connection failed:', error);
     }
-  }, [projectPath, setConnected, setConnecting, setError, setWorktrees, setProjectPath]);
+  }, [setConnected, setConnecting, setError]);
 
   const disconnect = useCallback(() => {
-    if (adapterRef.current) {
-      adapterRef.current.disconnect();
-      adapterRef.current = null;
-      setConnected(false);
-    }
+    console.log('🔌 Disconnecting global WebSocket adapter');
+    disconnectGlobalAdapter();
+    setConnected(false);
+    setAdapterVersion(prev => prev + 1); // Force re-render
   }, [setConnected]);
 
   const getAdapter = useCallback(() => {
-    return adapterRef.current;
-  }, []);
+    const adapter = getGlobalAdapter();
+    console.log('🔍 getAdapter called, globalAdapter:', adapter);
+    return adapter;
+  }, [adapterVersion]); // Re-run when adapter changes
+
+  // Subscribe to global adapter state changes
+  useEffect(() => {
+    const unsubscribeConnected = onGlobalAdapterConnected(() => {
+      console.log('🔌 Global adapter connected callback');
+      setConnected(true);
+      setAdapterVersion(prev => prev + 1);
+    });
+
+    const unsubscribeDisconnected = onGlobalAdapterDisconnected(() => {
+      console.log('💔 Global adapter disconnected callback');
+      setConnected(false);
+      setAdapterVersion(prev => prev + 1);
+    });
+
+    return () => {
+      unsubscribeConnected();
+      unsubscribeDisconnected();
+    };
+  }, [setConnected]);
 
   return {
     connect,

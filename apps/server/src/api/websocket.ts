@@ -25,7 +25,7 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
   const { shellManager, authService } = services;
 
   wss.on('connection', (ws: WebSocket, req) => {
-    console.log('New WebSocket connection');
+    console.log('🔌 New WebSocket connection from:', req.headers.origin || 'unknown');
     
     let authenticated = false;
     let deviceId: string | null = null;
@@ -66,6 +66,26 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
         ws.send(JSON.stringify({
           type: 'auth:error',
           payload: { error: 'Invalid JWT' }
+        }));
+        ws.close();
+        return;
+      }
+    } else {
+      // No authentication provided - allow localhost for development
+      const isLocalhost = req.headers.host?.includes('localhost') || 
+                         req.headers.host?.includes('127.0.0.1');
+      
+      if (isLocalhost && process.env.NODE_ENV !== 'production') {
+        authenticated = true;
+        deviceId = 'localhost-dev';
+        ws.send(JSON.stringify({
+          type: 'auth:success',
+          payload: { deviceId: 'localhost-dev' }
+        }));
+      } else {
+        ws.send(JSON.stringify({
+          type: 'auth:error',
+          payload: { error: 'Authentication required' }
         }));
         ws.close();
         return;
@@ -121,6 +141,7 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
               const connectionId = `ws-${Date.now()}`;
               
               // Set up output forwarding using the new listener methods
+              // This works for both new and existing sessions
               shellManager.addOutputListener(result.processId, connectionId, (data) => {
                 ws.send(JSON.stringify({
                   type: 'shell:output',
@@ -216,7 +237,28 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
               );
               ws.send(JSON.stringify({
                 type: 'git:diff:response',
-                payload: diff,
+                payload: { diff },
+                id: message.id
+              }));
+            } catch (error) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { error: (error as Error).message },
+                id: message.id
+              }));
+            }
+            break;
+          }
+
+          case 'git:diff:staged': {
+            try {
+              const diff = await getGitDiffStaged(
+                message.payload.worktreePath,
+                message.payload.filePath
+              );
+              ws.send(JSON.stringify({
+                type: 'git:diff:staged:response',
+                payload: { diff },
                 id: message.id
               }));
             } catch (error) {
@@ -288,8 +330,8 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
       }
     });
 
-    ws.on('close', () => {
-      console.log('WebSocket connection closed');
+    ws.on('close', (code, reason) => {
+      console.log('💔 WebSocket connection closed:', { code, reason: reason.toString(), authenticated, deviceId });
       // Clean up any active shell sessions
       for (const sessionId of activeShellSessions) {
         shellManager.terminateSession(sessionId);
