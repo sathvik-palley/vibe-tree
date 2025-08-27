@@ -1,6 +1,6 @@
 import { useAppStore } from '../store';
 import { useWebSocket } from '../hooks/useWebSocket';
-import { ChevronLeft, GitBranch, RefreshCw } from 'lucide-react';
+import { ChevronLeft, GitBranch, RefreshCw, Plus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface WorktreePanelProps {
@@ -17,6 +17,8 @@ export function WorktreePanel({ projectId }: WorktreePanelProps) {
   
   const { getAdapter } = useWebSocket();
   const [loading, setLoading] = useState(false);
+  const [showNewBranchDialog, setShowNewBranchDialog] = useState(false);
+  const [newBranchName, setNewBranchName] = useState('');
   
   const project = getProject(projectId);
   const adapter = getAdapter(); // Get adapter once per render
@@ -42,6 +44,32 @@ export function WorktreePanel({ projectId }: WorktreePanelProps) {
 
   const handleBack = () => {
     setSelectedWorktree(projectId, null);
+  };
+
+  const handleCreateBranch = async () => {
+    const adapter = getAdapter();
+    if (!newBranchName.trim() || !adapter || !connected || !project) return;
+
+    setLoading(true);
+    try {
+      const result = await adapter.addWorktree(project.path, newBranchName);
+      console.log('✅ Created worktree:', result);
+      
+      setShowNewBranchDialog(false);
+      setNewBranchName('');
+      
+      // Refresh worktrees to show the new one
+      const trees = await adapter.listWorktrees(project.path);
+      updateProjectWorktrees(projectId, trees);
+      
+      // Select the newly created worktree
+      setSelectedWorktree(projectId, result.path);
+    } catch (error) {
+      console.error('❌ Failed to create worktree:', error);
+      // TODO: Add toast notification for error
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Auto-load worktrees when component mounts or project changes
@@ -107,13 +135,22 @@ export function WorktreePanel({ projectId }: WorktreePanelProps) {
           )}
           <h2 className="font-semibold">Worktrees</h2>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={!connected || loading}
-          className="p-1 hover:bg-accent rounded disabled:opacity-50"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleRefresh}
+            disabled={!connected || loading}
+            className="p-1 hover:bg-accent rounded disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={() => setShowNewBranchDialog(true)}
+            disabled={!connected}
+            className="p-1 hover:bg-accent rounded disabled:opacity-50"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {/* Project Path */}
@@ -130,7 +167,7 @@ export function WorktreePanel({ projectId }: WorktreePanelProps) {
         ) : project.worktrees.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground">
             <p className="text-sm">No worktrees found</p>
-            <p className="text-xs mt-2">Create worktrees in the desktop app</p>
+            <p className="text-xs mt-2">Click the + button to create worktrees</p>
           </div>
         ) : (
           <div className="p-2">
@@ -162,6 +199,57 @@ export function WorktreePanel({ projectId }: WorktreePanelProps) {
           </div>
         )}
       </div>
+
+      {/* Create New Branch Dialog */}
+      {showNewBranchDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-background border rounded-lg shadow-lg w-full max-w-md">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-2">Create New Feature Branch</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                This will create a new git worktree for parallel development
+              </p>
+              
+              <input
+                type="text"
+                placeholder="feature-name"
+                value={newBranchName}
+                onChange={(e) => setNewBranchName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleCreateBranch();
+                  }
+                  if (e.key === 'Escape') {
+                    setShowNewBranchDialog(false);
+                    setNewBranchName('');
+                  }
+                }}
+                className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-ring"
+                autoFocus
+              />
+              
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  onClick={() => {
+                    setShowNewBranchDialog(false);
+                    setNewBranchName('');
+                  }}
+                  className="px-4 py-2 text-sm border border-border rounded-md hover:bg-accent"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateBranch}
+                  disabled={!newBranchName.trim() || loading}
+                  className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {loading ? 'Creating...' : 'Create Branch'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
