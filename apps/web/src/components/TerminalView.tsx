@@ -5,7 +5,14 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { ChevronLeft, Maximize2, Minimize2 } from 'lucide-react';
 import type { Terminal as XTerm } from '@xterm/xterm';
 
-export function TerminalView() {
+// Cache for terminal states per session ID (like desktop app)
+const terminalStateCache = new Map<string, string>();
+
+interface TerminalViewProps {
+  worktreePath: string;
+}
+
+export function TerminalView({ worktreePath }: TerminalViewProps) {
   const { 
     getActiveProject,
     setSelectedWorktree,
@@ -15,12 +22,13 @@ export function TerminalView() {
   } = useAppStore();
   
   const activeProject = getActiveProject();
-  const selectedWorktree = activeProject?.selectedWorktree;
+  const selectedWorktree = worktreePath;
   const { getAdapter } = useWebSocket();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const terminalRef = useRef<XTerm | null>(null);
   const cleanupRef = useRef<(() => void)[]>([]);
+  const saveIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!selectedWorktree) {
@@ -46,12 +54,37 @@ export function TerminalView() {
         if (terminalRef.current) {
           terminalRef.current.write(`\r\n[Process exited with code ${code}]\r\n`);
         }
+        // Clear cached state when session exits
+        terminalStateCache.delete(existingSessionId);
         removeTerminalSession(selectedWorktree);
         setSessionId(null);
       });
 
       cleanupRef.current = [unsubscribeOutput, unsubscribeExit];
       setSessionId(existingSessionId);
+      
+      // Restore terminal state for existing session (like desktop app)
+      console.log('🔄 Reconnecting to existing session - restoring state');
+      console.log('📊 Session cache status:', {
+        sessionId: existingSessionId,
+        hasCachedState: terminalStateCache.has(existingSessionId),
+        cacheSize: terminalStateCache.size,
+        allCachedSessions: Array.from(terminalStateCache.keys())
+      });
+      
+      const cachedState = terminalStateCache.get(existingSessionId);
+      if (cachedState && terminalRef.current) {
+        setTimeout(() => {
+          if (terminalRef.current && cachedState) {
+            terminalRef.current.clear();
+            terminalRef.current.write(cachedState);
+            console.log('✅ State restored for existing session:', existingSessionId);
+          }
+        }, 100);
+      } else {
+        console.log('⚠️ No cached state for existing session:', existingSessionId);
+      }
+      
       return;
     }
 
@@ -76,15 +109,58 @@ export function TerminalView() {
             if (terminalRef.current) {
               terminalRef.current.write(`\r\n[Process exited with code ${code}]\r\n`);
             }
+            // Clear cached state when session exits
+            terminalStateCache.delete(actualSessionId);
             removeTerminalSession(selectedWorktree);
             setSessionId(null);
           });
 
           cleanupRef.current = [unsubscribeOutput, unsubscribeExit];
+          // Check if this is a different session ID than what we had cached
+          const cachedSessionId = terminalSessions.get(selectedWorktree);
+          if (cachedSessionId && cachedSessionId !== actualSessionId) {
+            console.warn(`🔄 Session ID changed for ${selectedWorktree}:`, {
+              oldSessionId: cachedSessionId,
+              newSessionId: actualSessionId,
+              reason: 'Likely session timeout and cleanup'
+            });
+            // Clear old cached state since session changed
+            terminalStateCache.delete(cachedSessionId);
+          }
+          
           setSessionId(actualSessionId);
           addTerminalSession(selectedWorktree, actualSessionId);
           
           console.log(`Shell started: ${actualSessionId}, isNew: ${result.isNew}, worktree: ${selectedWorktree}`);
+          console.log('📊 Terminal cache status:', {
+            sessionId: actualSessionId,
+            hasCachedState: terminalStateCache.has(actualSessionId),
+            cacheSize: terminalStateCache.size,
+            allCachedSessions: Array.from(terminalStateCache.keys())
+          });
+          
+          // Handle terminal state restoration like desktop app
+          if (!result.isNew) {
+            // Existing shell - restore cached state to fresh terminal
+            console.log('🔄 Existing shell session - restoring state');
+            const cachedState = terminalStateCache.get(actualSessionId);
+            if (cachedState && terminalRef.current) {
+              // Clear the fresh terminal first
+              terminalRef.current.clear();
+              // Restore the cached content after a delay to ensure terminal is ready
+              setTimeout(() => {
+                if (terminalRef.current && cachedState) {
+                  terminalRef.current.write(cachedState);
+                  console.log('✅ State restored for session:', actualSessionId);
+                }
+              }, 100);
+            } else {
+              console.log('⚠️ No cached state found for session:', actualSessionId);
+            }
+          } else {
+            // New shell - terminal is already clean
+            console.log('🧹 New shell session - terminal ready');
+          }
         } else {
           console.error('Failed to start shell session:', result.error);
         }
@@ -101,6 +177,53 @@ export function TerminalView() {
       cleanupRef.current = [];
     };
   }, [selectedWorktree, getAdapter, terminalSessions, addTerminalSession, removeTerminalSession]);
+
+  // Periodic state saving and cleanup (like desktop app)
+  useEffect(() => {
+    if (!sessionId) return;
+    
+    // Start periodic saving every 5 seconds (like desktop app)
+    saveIntervalRef.current = setInterval(() => {
+      if (sessionId) {
+        try {
+          const terminalInstance = (window as any)[`terminal_${sessionId}`];
+          if (terminalInstance?.serialize) {
+            const serializedState = terminalInstance.serialize();
+            if (serializedState) {
+              terminalStateCache.set(sessionId, serializedState);
+              console.log('💾 Periodic save for session:', sessionId);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to save terminal state:', error);
+        }
+      }
+    }, 5000);
+    
+    return () => {
+      // Save state before component unmount (like desktop app)
+      if (sessionId) {
+        try {
+          const terminalInstance = (window as any)[`terminal_${sessionId}`];
+          if (terminalInstance?.serialize) {
+            const serializedState = terminalInstance.serialize();
+            if (serializedState) {
+              terminalStateCache.set(sessionId, serializedState);
+              console.log('💾 Final save on unmount for session:', sessionId);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to save terminal state on unmount:', error);
+        }
+      }
+      
+      // Clear interval
+      if (saveIntervalRef.current) {
+        clearInterval(saveIntervalRef.current);
+        saveIntervalRef.current = null;
+      }
+    };
+  }, [sessionId]);
 
   const handleTerminalData = async (data: string) => {
     if (!sessionId) {
@@ -162,7 +285,7 @@ export function TerminalView() {
           <div className="min-w-0">
             <h3 className="font-semibold truncate">Terminal</h3>
             <p className="text-xs text-muted-foreground truncate">
-              {selectedWorktree.split('/').slice(-2).join('/')}
+              {selectedWorktree?.split('/').slice(-2).join('/')}
             </p>
           </div>
         </div>
@@ -180,9 +303,8 @@ export function TerminalView() {
 
       {/* Terminal Container */}
       <div className="flex-1 bg-black">
-        {sessionId && selectedWorktree && (
+        {sessionId && (
           <Terminal
-            key={selectedWorktree}
             id={sessionId}
             onData={handleTerminalData}
             onResize={handleTerminalResize}
