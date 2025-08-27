@@ -55,57 +55,41 @@ export function TerminalView() {
       return;
     }
 
-    // Start new shell session
+    // Start new shell session - follow desktop app pattern
     const startSession = async () => {
       try {
-        // First, get or create a deterministic session ID for this worktree
-        // This matches the server's generateSessionId logic
-        const encoder = new TextEncoder();
-        const data = encoder.encode(selectedWorktree);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        const expectedSessionId = hashHex.substring(0, 16);
-        
-        // Set up event listeners FIRST, before starting shell
-        // This prevents race condition where shell output arrives before listeners are registered
-        const unsubscribeOutput = adapter.onShellOutput(expectedSessionId, (data) => {
-          if (terminalRef.current) {
-            terminalRef.current.write(data);
-          }
-        });
-
-        const unsubscribeExit = adapter.onShellExit(expectedSessionId, (code) => {
-          if (terminalRef.current) {
-            terminalRef.current.write(`\r\n[Process exited with code ${code}]\r\n`);
-          }
-          removeTerminalSession(selectedWorktree);
-          setSessionId(null);
-        });
-
-        // Store cleanup functions immediately
-        cleanupRef.current = [unsubscribeOutput, unsubscribeExit];
-        
-        // Set session ID immediately so terminal component can render
-        setSessionId(expectedSessionId);
-        
-        // NOW start the shell session - listeners are already in place
+        // Call server directly and wait for actual session ID (like desktop app)
         const result = await adapter.startShell(selectedWorktree);
         
         if (result.success && result.processId) {
-          addTerminalSession(selectedWorktree, result.processId);
+          // Use the actual session ID returned by server
+          const actualSessionId = result.processId;
+          
+          // Set up event listeners using the server-provided session ID
+          const unsubscribeOutput = adapter.onShellOutput(actualSessionId, (data) => {
+            if (terminalRef.current) {
+              terminalRef.current.write(data);
+            }
+          });
+
+          const unsubscribeExit = adapter.onShellExit(actualSessionId, (code) => {
+            if (terminalRef.current) {
+              terminalRef.current.write(`\r\n[Process exited with code ${code}]\r\n`);
+            }
+            removeTerminalSession(selectedWorktree);
+            setSessionId(null);
+          });
+
+          cleanupRef.current = [unsubscribeOutput, unsubscribeExit];
+          setSessionId(actualSessionId);
+          addTerminalSession(selectedWorktree, actualSessionId);
+          
+          console.log(`Shell started: ${actualSessionId}, isNew: ${result.isNew}, worktree: ${selectedWorktree}`);
         } else {
-          // Clean up listeners if session failed
-          cleanupRef.current.forEach(cleanup => cleanup());
-          cleanupRef.current = [];
-          setSessionId(null);
+          console.error('Failed to start shell session:', result.error);
         }
       } catch (error) {
         console.error('Failed to start shell session:', error);
-        // Clean up listeners on error
-        cleanupRef.current.forEach(cleanup => cleanup());
-        cleanupRef.current = [];
-        setSessionId(null);
       }
     };
 
@@ -196,8 +180,9 @@ export function TerminalView() {
 
       {/* Terminal Container */}
       <div className="flex-1 bg-black">
-        {sessionId && (
+        {sessionId && selectedWorktree && (
           <Terminal
+            key={selectedWorktree}
             id={sessionId}
             onData={handleTerminalData}
             onResize={handleTerminalResize}

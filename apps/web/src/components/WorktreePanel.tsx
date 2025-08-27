@@ -39,6 +39,11 @@ export function WorktreePanel({ projectId }: WorktreePanelProps) {
   };
 
   const handleSelectWorktree = (path: string) => {
+    console.log('🎯 WorktreePanel: Selecting worktree:', { 
+      projectId, 
+      path, 
+      currentSelection: project?.selectedWorktree 
+    });
     setSelectedWorktree(projectId, path);
   };
 
@@ -171,18 +176,24 @@ export function WorktreePanel({ projectId }: WorktreePanelProps) {
           </div>
         ) : (
           <div className="p-2">
-            {project.worktrees.map((worktree) => (
-              <button
-                key={worktree.path}
-                onClick={() => handleSelectWorktree(worktree.path)}
-                className={`
-                  w-full text-left p-3 rounded-md mb-1 transition-colors
-                  ${project.selectedWorktree === worktree.path 
-                    ? 'bg-accent' 
-                    : 'hover:bg-accent/50'
-                  }
-                `}
-              >
+            {project.worktrees.map((worktree) => {
+              console.log('🌳 Rendering worktree:', { 
+                branch: worktree.branch, 
+                path: worktree.path,
+                isSelected: project.selectedWorktree === worktree.path
+              });
+              return (
+                <button
+                  key={worktree.path}
+                  onClick={() => handleSelectWorktree(worktree.path)}
+                  className={`
+                    w-full text-left p-3 rounded-md mb-1 transition-colors
+                    ${project.selectedWorktree === worktree.path 
+                      ? 'bg-accent' 
+                      : 'hover:bg-accent/50'
+                    }
+                  `}
+                >
                 <div className="flex items-start gap-2">
                   <GitBranch className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -195,7 +206,8 @@ export function WorktreePanel({ projectId }: WorktreePanelProps) {
                   </div>
                 </div>
               </button>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
