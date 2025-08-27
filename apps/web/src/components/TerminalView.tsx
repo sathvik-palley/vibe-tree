@@ -11,7 +11,8 @@ export function TerminalView() {
     setSelectedWorktree,
     terminalSessions,
     addTerminalSession,
-    removeTerminalSession
+    removeTerminalSession,
+    theme
   } = useAppStore();
   
   const activeProject = getActiveProject();
@@ -195,7 +196,7 @@ export function TerminalView() {
       </div>
 
       {/* Terminal Container */}
-      <div className="flex-1 bg-black">
+      <div className={`flex-1 ${theme === 'light' ? 'bg-white' : 'bg-black'}`}>
         {sessionId && (
           <Terminal
             id={sessionId}
@@ -203,7 +204,7 @@ export function TerminalView() {
             onResize={handleTerminalResize}
             onReady={handleTerminalReady}
             config={{
-              theme: 'dark',
+              theme: theme,
               fontSize: 14,
               cursorBlink: true
             }}
