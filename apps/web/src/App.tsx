@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { WorktreePanel } from './components/WorktreePanel';
-import { TerminalView } from './components/TerminalView';
+import { TerminalManager } from './components/TerminalManager';
 import { GitDiffView } from './components/GitDiffView';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { ProjectSelector } from './components/ProjectSelector';
@@ -194,9 +194,12 @@ function App() {
 
                   {/* Tab Content */}
                   <div className="flex-1 overflow-hidden relative">
-                    {/* Keep TerminalView mounted but hidden to preserve history */}
+                    {/* Terminal Tab - Managed terminals with lifecycle control */}
                     <div className={`absolute inset-0 ${project.selectedTab === 'terminal' ? 'block' : 'hidden'}`}>
-                      <TerminalView />
+                      <TerminalManager 
+                        worktrees={project.worktrees || []}
+                        selectedWorktree={project.selectedWorktree}
+                      />
                     </div>
                     
                     {/* Keep GitDiffView mounted but hidden to preserve state */}
