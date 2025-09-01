@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import * as path from 'path';
-import { Worktree, GitStatus, WorktreeAddResult, WorktreeRemoveResult } from '../types';
+import { Worktree, GitStatus, WorktreeAddResult, WorktreeRemoveResult, ProjectValidationResult } from '../types';
 import { parseWorktrees, parseGitStatus } from './git-parser';
 
 /**
@@ -151,4 +151,54 @@ export async function isGitRepository(path: string): Promise<boolean> {
 export async function getCurrentBranch(worktreePath: string): Promise<string> {
   const output = await executeGitCommand(['rev-parse', '--abbrev-ref', 'HEAD'], worktreePath);
   return output.trim();
+}
+
+/**
+ * Validate multiple project paths
+ * @param projectPaths - Array of project paths to validate
+ * @returns Array of validation results
+ */
+export async function validateProjects(projectPaths: string[]): Promise<ProjectValidationResult[]> {
+  const results = await Promise.allSettled(
+    projectPaths.map(async (projectPath) => {
+      try {
+        // Check if directory exists by trying to access it
+        const isGitRepo = await isGitRepository(projectPath);
+        if (!isGitRepo) {
+          return {
+            path: projectPath,
+            valid: false,
+            error: 'Not a git repository'
+          } as ProjectValidationResult;
+        }
+
+        // Get repository name from path
+        const name = path.basename(projectPath);
+        
+        return {
+          path: projectPath,
+          name,
+          valid: true
+        } as ProjectValidationResult;
+      } catch (error) {
+        return {
+          path: projectPath,
+          valid: false,
+          error: `Directory not accessible: ${(error as Error).message}`
+        } as ProjectValidationResult;
+      }
+    })
+  );
+
+  return results.map((result, index) => {
+    if (result.status === 'fulfilled') {
+      return result.value;
+    } else {
+      return {
+        path: projectPaths[index],
+        valid: false,
+        error: `Validation failed: ${result.reason}`
+      };
+    }
+  });
 }

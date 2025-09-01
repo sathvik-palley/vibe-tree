@@ -6,7 +6,8 @@ import {
   getGitStatus,
   getGitDiff,
   addWorktree,
-  removeWorktree
+  removeWorktree,
+  validateProjects
 } from '@vibetree/core';
 
 interface Services {
@@ -118,6 +119,30 @@ export function setupRestRoutes(app: Express, services: Services) {
         req.body.branchName
       );
       res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Validate multiple project paths
+  app.post('/api/projects/validate', async (req, res) => {
+    try {
+      const { projectPaths } = req.body;
+      
+      if (!Array.isArray(projectPaths)) {
+        return res.status(400).json({ error: 'projectPaths must be an array' });
+      }
+      
+      if (projectPaths.length === 0) {
+        return res.json([]);
+      }
+      
+      if (projectPaths.length > 10) {
+        return res.status(400).json({ error: 'Maximum 10 projects can be validated at once' });
+      }
+      
+      const results = await validateProjects(projectPaths);
+      res.json(results);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
