@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { FolderOpen, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FolderOpen, Plus, AlertCircle, Info } from 'lucide-react';
+import { isAutoLoadEnabled, getAutoLoadConfig, validateAutoLoadConfig } from '../utils/autoLoad';
 
 interface ProjectSelectorProps {
   onSelectProject: (path: string) => void;
@@ -9,6 +10,15 @@ export function ProjectSelector({ onSelectProject }: ProjectSelectorProps) {
   const [projectPath, setProjectPath] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [configWarnings, setConfigWarnings] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Check for auto-load configuration warnings
+    if (isAutoLoadEnabled()) {
+      const warnings = validateAutoLoadConfig();
+      setConfigWarnings(warnings);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,8 +32,6 @@ export function ProjectSelector({ onSelectProject }: ProjectSelectorProps) {
     setIsLoading(true);
 
     try {
-      // For now, just add the project without server validation
-      // In Phase 3, we can add server-side validation
       onSelectProject(projectPath.trim());
     } catch (err) {
       setError('Failed to add project. Please check the path.');
@@ -31,6 +39,8 @@ export function ProjectSelector({ onSelectProject }: ProjectSelectorProps) {
       setIsLoading(false);
     }
   };
+
+  const autoLoadConfig = isAutoLoadEnabled() ? getAutoLoadConfig() : null;
 
   return (
     <div className="flex-1 flex items-center justify-center p-8">
@@ -44,6 +54,38 @@ export function ProjectSelector({ onSelectProject }: ProjectSelectorProps) {
             Enter the path to your git repository to start working with Claude in parallel worktrees
           </p>
         </div>
+
+        {/* Auto-load configuration info */}
+        {autoLoadConfig && (
+          <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-blue-500" />
+              <span className="text-sm font-medium">Auto-load Configuration</span>
+            </div>
+            
+            <div className="text-xs text-muted-foreground space-y-2">
+              <p>
+                <strong>Projects:</strong> {autoLoadConfig.projectPaths.join(', ')}
+              </p>
+              {autoLoadConfig.defaultProject && (
+                <p>
+                  <strong>Default:</strong> {autoLoadConfig.defaultProject}
+                </p>
+              )}
+            </div>
+            
+            {configWarnings.length > 0 && (
+              <div className="space-y-1">
+                {configWarnings.map((warning, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <AlertCircle className="h-3 w-3 text-yellow-500 mt-0.5 flex-shrink-0" />
+                    <span className="text-xs text-yellow-600 dark:text-yellow-400">{warning}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

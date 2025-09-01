@@ -7,7 +7,7 @@ import { ProjectSelector } from './components/ProjectSelector';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@vibetree/ui';
 import { useAppStore } from './store';
 import { useWebSocket } from './hooks/useWebSocket';
-import { Sun, Moon, Plus, X, Terminal, GitBranch } from 'lucide-react';
+import { Sun, Moon, Plus, X, Terminal, GitBranch, CheckCircle } from 'lucide-react';
 import { isAutoLoadEnabled, getAutoLoadConfig, validateAutoLoadConfig } from './utils/autoLoad';
 import { validateProjectPaths } from './services/projectValidation';
 
@@ -16,6 +16,8 @@ function App() {
   const { connect } = useWebSocket();
   const [showProjectSelector, setShowProjectSelector] = useState(false);
   const [autoLoadAttempted, setAutoLoadAttempted] = useState(false);
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   
   const activeProject = getActiveProject();
 
@@ -55,6 +57,15 @@ function App() {
               }
               
               console.log(`Auto-loaded ${validPaths.length} projects`);
+              
+              // Show success notification
+              setSuccessMessage(`Successfully auto-loaded ${validPaths.length} project${validPaths.length === 1 ? '' : 's'}`);
+              setShowSuccessNotification(true);
+              
+              // Auto-hide notification after 3 seconds
+              setTimeout(() => {
+                setShowSuccessNotification(false);
+              }, 3000);
             }
             
             // Log invalid projects
@@ -144,6 +155,22 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col bg-background">
+      {/* Success Notification Banner */}
+      {showSuccessNotification && (
+        <div className="bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800 px-4 py-2">
+          <div className="flex items-center gap-2 text-green-700 dark:text-green-300">
+            <CheckCircle className="h-4 w-4" />
+            <span className="text-sm font-medium">{successMessage}</span>
+            <button 
+              onClick={() => setShowSuccessNotification(false)}
+              className="ml-auto hover:bg-green-100 dark:hover:bg-green-800/30 rounded p-1"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="h-14 border-b flex items-center justify-between px-4 flex-shrink-0">
         <div className="flex items-center gap-2">
