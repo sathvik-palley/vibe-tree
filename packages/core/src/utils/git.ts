@@ -11,7 +11,12 @@ import { parseWorktrees, parseGitStatus } from './git-parser';
  */
 export function executeGitCommand(args: string[], cwd: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn('git', args, { cwd });
+    // Try 'git' first, fallback to absolute path if not found
+    const gitCommand = process.env.PATH?.includes('/usr/bin') ? 'git' : '/usr/bin/git';
+    const child = spawn(gitCommand, args, { 
+      cwd,
+      env: { ...process.env, PATH: process.env.PATH || '/usr/bin:/bin:/usr/local/bin' }
+    });
     
     let stdout = '';
     let stderr = '';
