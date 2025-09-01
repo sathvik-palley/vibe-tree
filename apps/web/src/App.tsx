@@ -8,11 +8,14 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@vibetree/ui';
 import { useAppStore } from './store';
 import { useWebSocket } from './hooks/useWebSocket';
 import { Sun, Moon, Plus, X, Terminal, GitBranch } from 'lucide-react';
+import { isAutoLoadEnabled, getAutoLoadConfig, validateAutoLoadConfig } from './utils/autoLoad';
+import { validateProjectPaths } from './services/projectValidation';
 
 function App() {
-  const { projects, activeProjectId, addProject, removeProject, setActiveProject, getActiveProject, setSelectedTab, theme, setTheme } = useAppStore();
+  const { projects, activeProjectId, addProject, addProjects, removeProject, setActiveProject, getActiveProject, setSelectedTab, theme, setTheme, connected } = useAppStore();
   const { connect } = useWebSocket();
   const [showProjectSelector, setShowProjectSelector] = useState(false);
+  const [autoLoadAttempted, setAutoLoadAttempted] = useState(false);
   
   const activeProject = getActiveProject();
 
@@ -20,6 +23,56 @@ function App() {
     // Auto-connect on mount
     connect();
   }, []);
+
+  // Auto-load projects when connection is established
+  useEffect(() => {
+    if (connected && !autoLoadAttempted && projects.length === 0) {
+      const loadProjects = async () => {
+        if (isAutoLoadEnabled()) {
+          const config = getAutoLoadConfig();
+          const warnings = validateAutoLoadConfig();
+          
+          // Log configuration warnings
+          if (warnings.length > 0) {
+            console.warn('Auto-load configuration warnings:', warnings);
+          }
+          
+          try {
+            // Validate projects server-side
+            const validationResults = await validateProjectPaths(config.projectPaths);
+            const validPaths = validationResults
+              .filter(result => result.valid)
+              .map(result => result.path);
+            
+            if (validPaths.length > 0) {
+              // Add valid projects
+              const addedIds = addProjects(validPaths);
+              
+              // Set default project if specified and valid
+              if (config.defaultProject && validPaths.includes(config.defaultProject)) {
+                const defaultId = addedIds[validPaths.indexOf(config.defaultProject)];
+                setActiveProject(defaultId);
+              }
+              
+              console.log(`Auto-loaded ${validPaths.length} projects`);
+            }
+            
+            // Log invalid projects
+            const invalidResults = validationResults.filter(result => !result.valid);
+            if (invalidResults.length > 0) {
+              console.warn('Failed to auto-load projects:', invalidResults);
+            }
+          } catch (error) {
+            console.error('Auto-load failed:', error);
+          }
+        }
+        
+        setAutoLoadAttempted(true);
+      };
+      
+      loadProjects();
+    }
+  }, [connected, autoLoadAttempted, projects.length, addProjects, setActiveProject]);
 
   useEffect(() => {
     // Initialize theme from localStorage or system preference
