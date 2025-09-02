@@ -8,8 +8,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@vibetree/ui';
 import { useAppStore } from './store';
 import { useWebSocket } from './hooks/useWebSocket';
 import { Sun, Moon, Plus, X, Terminal, GitBranch, CheckCircle } from 'lucide-react';
-import { isAutoLoadEnabled, getAutoLoadConfig, validateAutoLoadConfig } from './utils/autoLoad';
-import { validateProjectPaths } from './services/projectValidation';
+import { autoLoadProjects } from './services/projectValidation';
 
 function App() {
   const { projects, activeProjectId, addProject, addProjects, removeProject, setActiveProject, getActiveProject, setSelectedTab, theme, setTheme, connected } = useAppStore();
@@ -30,19 +29,12 @@ function App() {
   useEffect(() => {
     if (connected && !autoLoadAttempted && projects.length === 0) {
       const loadProjects = async () => {
-        if (isAutoLoadEnabled()) {
-          const config = getAutoLoadConfig();
-          const warnings = validateAutoLoadConfig();
+        try {
+          // Get auto-load configuration from backend
+          const autoLoadResponse = await autoLoadProjects();
           
-          // Log configuration warnings
-          if (warnings.length > 0) {
-            console.warn('Auto-load configuration warnings:', warnings);
-          }
-          
-          try {
-            // Validate projects server-side
-            const validationResults = await validateProjectPaths(config.projectPaths);
-            const validPaths = validationResults
+          if (autoLoadResponse.validationResults.length > 0) {
+            const validPaths = autoLoadResponse.validationResults
               .filter(result => result.valid)
               .map(result => result.path);
             
@@ -50,10 +42,13 @@ function App() {
               // Add valid projects
               const addedIds = addProjects(validPaths);
               
-              // Set default project if specified and valid
-              if (config.defaultProject && validPaths.includes(config.defaultProject)) {
-                const defaultId = addedIds[validPaths.indexOf(config.defaultProject)];
-                setActiveProject(defaultId);
+              // Set default project if specified by backend
+              if (autoLoadResponse.defaultProjectPath) {
+                const defaultIndex = validPaths.indexOf(autoLoadResponse.defaultProjectPath);
+                if (defaultIndex >= 0) {
+                  const defaultId = addedIds[defaultIndex];
+                  setActiveProject(defaultId);
+                }
               }
               
               console.log(`Auto-loaded ${validPaths.length} projects`);
@@ -68,14 +63,14 @@ function App() {
               }, 3000);
             }
             
-            // Log invalid projects
-            const invalidResults = validationResults.filter(result => !result.valid);
+            // Log validation errors for invalid paths
+            const invalidResults = autoLoadResponse.validationResults.filter(result => !result.valid);
             if (invalidResults.length > 0) {
-              console.warn('Failed to auto-load projects:', invalidResults);
+              console.warn('Some projects failed validation:', invalidResults);
             }
-          } catch (error) {
-            console.error('Auto-load failed:', error);
           }
+        } catch (error) {
+          console.error('Auto-load failed:', error);
         }
         
         setAutoLoadAttempted(true);
