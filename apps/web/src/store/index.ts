@@ -31,6 +31,7 @@ interface AppState {
   setConnecting: (connecting: boolean) => void;
   setError: (error: string | null) => void;
   addProject: (path: string) => string;
+  addProjects: (paths: string[]) => string[];
   removeProject: (id: string) => void;
   setActiveProject: (id: string) => void;
   updateProjectWorktrees: (id: string, worktrees: Worktree[]) => void;
@@ -84,6 +85,44 @@ export const useAppStore = create<AppState>((set, get) => ({
       activeProjectId: id
     }));
     return id;
+  },
+
+  addProjects: (paths: string[]) => {
+    const state = get();
+    const newProjects: Project[] = [];
+    const addedIds: string[] = [];
+
+    paths.forEach(path => {
+      // Check if project already exists
+      const existing = state.projects.find(p => p.path === path);
+      if (existing) {
+        addedIds.push(existing.id);
+        return;
+      }
+
+      const id = `project-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const name = path.split('/').pop() || 'Unnamed Project';
+      
+      const newProject: Project = {
+        id,
+        path,
+        name,
+        worktrees: [],
+        selectedWorktree: null,
+        selectedTab: 'terminal'
+      };
+
+      newProjects.push(newProject);
+      addedIds.push(id);
+    });
+
+    if (newProjects.length > 0) {
+      set((state) => ({
+        projects: [...state.projects, ...newProjects]
+      }));
+    }
+
+    return addedIds;
   },
 
   removeProject: (id: string) => {

@@ -33,13 +33,15 @@ export class WebSocketAdapter extends BaseAdapter {
       this.ws = new WebSocket(url);
 
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('✅ WebSocket connected successfully to:', url);
         resolve();
       };
 
       this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        reject(error);
+        console.error('💔 WebSocket error occurred:', error);
+        console.error('💔 WebSocket URL was:', url);
+        console.error('💔 WebSocket readyState:', this.ws?.readyState);
+        reject(new Error(`WebSocket connection failed: ${error}`));
       };
 
       this.ws.onmessage = (event) => {

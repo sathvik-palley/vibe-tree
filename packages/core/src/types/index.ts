@@ -56,3 +56,10 @@ export interface WorktreeRemoveResult {
   success: boolean;
   warning?: string;
 }
+
+export interface ProjectValidationResult {
+  path: string;
+  name?: string;
+  valid: boolean;
+  error?: string;
+}

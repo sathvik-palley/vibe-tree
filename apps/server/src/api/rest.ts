@@ -6,7 +6,8 @@ import {
   getGitStatus,
   getGitDiff,
   addWorktree,
-  removeWorktree
+  removeWorktree,
+  validateProjects
 } from '@vibetree/core';
 
 interface Services {
@@ -118,6 +119,77 @@ export function setupRestRoutes(app: Express, services: Services) {
         req.body.branchName
       );
       res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Validate multiple project paths
+  app.post('/api/projects/validate', async (req, res) => {
+    try {
+      const { projectPaths } = req.body;
+      
+      if (!Array.isArray(projectPaths)) {
+        return res.status(400).json({ error: 'projectPaths must be an array' });
+      }
+      
+      if (projectPaths.length === 0) {
+        return res.json([]);
+      }
+      
+      if (projectPaths.length > 10) {
+        return res.status(400).json({ error: 'Maximum 10 projects can be validated at once' });
+      }
+      
+      const results = await validateProjects(projectPaths);
+      res.json(results);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Auto-load projects from environment variable
+  app.get('/api/projects/auto-load', async (req, res) => {
+    try {
+      const defaultProjectsEnv = process.env.DEFAULT_PROJECTS;
+      
+      if (!defaultProjectsEnv || defaultProjectsEnv.trim() === '') {
+        return res.json({ 
+          projectPaths: [], 
+          validationResults: [], 
+          defaultProjectPath: null 
+        });
+      }
+      
+      // Parse comma-separated project paths
+      const projectPaths = defaultProjectsEnv
+        .split(',')
+        .map(path => path.trim())
+        .filter(path => path.length > 0);
+      
+      if (projectPaths.length === 0) {
+        return res.json({ 
+          projectPaths: [], 
+          validationResults: [], 
+          defaultProjectPath: null 
+        });
+      }
+      
+      if (projectPaths.length > 10) {
+        return res.status(400).json({ error: 'Maximum 10 projects can be configured in DEFAULT_PROJECTS' });
+      }
+      
+      // Validate all projects
+      const validationResults = await validateProjects(projectPaths);
+      
+      // First valid project becomes the default
+      const defaultProjectPath = validationResults.find(result => result.valid)?.path || null;
+      
+      res.json({
+        projectPaths,
+        validationResults,
+        defaultProjectPath
+      });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }

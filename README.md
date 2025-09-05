@@ -70,13 +70,14 @@ Create `.env` files as needed:
 
 ```bash
 # apps/web/.env (optional)
-VITE_WS_URL=ws://192.168.1.100:3002  # For custom socket server
-VITE_PROJECT_PATH=/path/to/project    # Override project path
+VITE_WS_URL=ws://192.168.1.100:3002     # For custom socket server
+VITE_PROJECT_PATH=/path/to/project       # Override project path
 
 # apps/server/.env (optional)
 PORT=3002                              # Socket server port
 HOST=0.0.0.0                          # Bind to all interfaces
 PROJECT_PATH=/path/to/project          # Default project path
+DEFAULT_PROJECTS=/path1,/path2         # Auto-load projects (first becomes default)
 ```
 
 ## Features

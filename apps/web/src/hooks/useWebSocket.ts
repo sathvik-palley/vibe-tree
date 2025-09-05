@@ -32,10 +32,15 @@ export function useWebSocket() {
       // Get WebSocket URL from environment or construct from current host
       let wsUrl = import.meta.env.VITE_WS_URL;
       
+      console.log('🔍 Environment VITE_WS_URL:', wsUrl);
+      console.log('🔍 Current window.location:', window.location);
+      
       if (!wsUrl) {
         // If accessing from network (not localhost), use the same host but port 3002
         const isLocalhost = window.location.hostname === 'localhost' || 
                           window.location.hostname === '127.0.0.1';
+        
+        console.log('🔍 Is localhost?', isLocalhost);
         
         if (isLocalhost) {
           wsUrl = 'ws://localhost:3002';
@@ -46,6 +51,8 @@ export function useWebSocket() {
         }
       }
       
+      console.log('🔌 Attempting WebSocket connection to:', wsUrl);
+      
       await connectGlobalAdapter(wsUrl);
       
       setConnected(true);
@@ -54,8 +61,14 @@ export function useWebSocket() {
 
     } catch (error) {
       setConnecting(false);
-      setError(error instanceof Error ? error.message : 'Failed to connect');
-      console.error('WebSocket connection failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
+      setError(errorMessage);
+      console.error('💔 WebSocket connection failed with error:', error);
+      console.error('💔 Error details:', {
+        message: errorMessage,
+        type: typeof error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
     }
   }, [setConnected, setConnecting, setError]);
 
