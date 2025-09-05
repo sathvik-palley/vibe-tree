@@ -30,11 +30,18 @@ pnpm dev:web     # Web app on :3000
 3. For mobile access on the same network:
    - Scan the QR code, OR
    - Navigate to the Network URL shown (e.g., `http://192.168.1.100:3000`)
+   - The web app will attempt `ws://<same-host>:3002` for WebSocket
 
 4. **Important for Safari/iOS**:
-   - The web app automatically detects network access and connects to the socket server on the same IP
+   - The web app tries to connect to the socket server on the same IP
    - Both services must be running (web on :3000, server on :3002)
    - If you have firewall enabled, allow connections on ports 3000 and 3002
+
+If you see "Not connected" on mobile:
+- Start the server allowing LAN dev connections (no pairing/auth):
+  `ALLOW_INSECURE_NETWORK=1 HOST=0.0.0.0 PORT=3002 pnpm dev:server`
+- Optionally set an explicit socket URL in `apps/web/.env`:
+  `VITE_WS_URL=ws://192.168.1.100:3002`
 
 ### Configuration
 

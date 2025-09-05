@@ -64,6 +64,21 @@ Download the latest release for your platform from the [Releases page](https://g
 - Both services must be running (web on :3000, server on :3002)
 - Allow firewall connections on both ports if prompted
 
+#### LAN Dev Mode (no pairing)
+When opening from a phone on your Wi‑Fi, the web UI loads over LAN and the web app connects to the socket server via WebSocket on :3002. In development, enable LAN WebSocket access without pairing:
+
+```bash
+# Allow LAN connections to the WebSocket server in dev (no auth)
+ALLOW_INSECURE_NETWORK=1 HOST=0.0.0.0 PORT=3002 pnpm dev:server
+pnpm dev:web
+```
+
+Then open the printed Network URL (e.g., http://192.168.1.x:3000) on your phone. If you still see "Not connected", you can explicitly point the web app at the socket server by creating `apps/web/.env`:
+
+```ini
+VITE_WS_URL=ws://192.168.1.x:3002
+```
+
 ### Environment Variables
 
 Create `.env` files as needed:
@@ -77,6 +92,11 @@ VITE_PROJECT_PATH=/path/to/project    # Override project path
 PORT=3002                              # Socket server port
 HOST=0.0.0.0                          # Bind to all interfaces
 PROJECT_PATH=/path/to/project          # Default project path
+# In dev, allow unauthenticated LAN WebSocket connections (use only on trusted networks)
+# Any of these enables it:
+# ALLOW_INSECURE_NETWORK=1
+# ALLOW_INSECURE_LAN=1
+# ALLOW_NETWORK_DEV=1
 ```
 
 ## Features
