@@ -22,8 +22,6 @@ export function ProjectSelector({ onSelectProject }: ProjectSelectorProps) {
     setIsLoading(true);
 
     try {
-      // For now, just add the project without server validation
-      // In Phase 3, we can add server-side validation
       onSelectProject(projectPath.trim());
     } catch (err) {
       setError('Failed to add project. Please check the path.');
@@ -31,6 +29,7 @@ export function ProjectSelector({ onSelectProject }: ProjectSelectorProps) {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="flex-1 flex items-center justify-center p-8">
@@ -44,6 +43,7 @@ export function ProjectSelector({ onSelectProject }: ProjectSelectorProps) {
             Enter the path to your git repository to start working with Claude in parallel worktrees
           </p>
         </div>
+
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
