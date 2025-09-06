@@ -52,7 +52,7 @@ class DesktopShellManager {
       return { running: this.sessionManager.hasSession(processId) };
     });
 
-    ipcMain.handle('shell:get-buffer', async (_) => {
+    ipcMain.handle('shell:get-buffer', async () => {
       // Buffer management handled on renderer side
       return { success: true, buffer: null };
     });
