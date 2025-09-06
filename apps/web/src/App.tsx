@@ -4,15 +4,18 @@ import { TerminalManager } from './components/TerminalManager';
 import { GitDiffView } from './components/GitDiffView';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { ProjectSelector } from './components/ProjectSelector';
+import { NotificationToasts } from './components/NotificationToasts';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@vibetree/ui';
 import { useAppStore } from './store';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useNotificationToasts } from './hooks/useNotificationToasts';
 import { Sun, Moon, Plus, X, Terminal, GitBranch, CheckCircle } from 'lucide-react';
 import { autoLoadProjects } from './services/projectValidation';
 
 function App() {
   const { projects, activeProjectId, addProject, addProjects, removeProject, setActiveProject, getActiveProject, setSelectedTab, theme, setTheme, connected } = useAppStore();
   const { connect } = useWebSocket();
+  const { toasts, dismissToast } = useNotificationToasts(connected);
   const [showProjectSelector, setShowProjectSelector] = useState(false);
   const [autoLoadAttempted, setAutoLoadAttempted] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
@@ -296,6 +299,9 @@ function App() {
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Toast Notifications */}
+      <NotificationToasts toasts={toasts} onDismiss={dismissToast} />
     </div>
   );
 }

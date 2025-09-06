@@ -1,18 +1,22 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { ShellManager } from '../services/ShellManager';
 import { AuthService } from '../auth/AuthService';
+import { NotificationService } from '../services/NotificationService';
 import {
   listWorktrees,
   getGitStatus,
   getGitDiff,
   getGitDiffStaged,
   addWorktree,
-  removeWorktree
+  removeWorktree,
+  NOTIFICATION_EVENTS,
+  ClaudeNotification
 } from '@vibetree/core';
 
 interface Services {
   shellManager: ShellManager;
   authService: AuthService;
+  notificationService: NotificationService;
 }
 
 interface WSMessage {
@@ -22,7 +26,32 @@ interface WSMessage {
 }
 
 export function setupWebSocketHandlers(wss: WebSocketServer, services: Services) {
-  const { shellManager, authService } = services;
+  const { shellManager, authService, notificationService } = services;
+  
+  // Set up notification broadcasting
+  const notificationManager = notificationService.getNotificationManager();
+  const connectionId = `ws-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Broadcast notifications to all connected clients
+  const handleNotificationBroadcast = (notification: ClaudeNotification) => {
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify({
+          type: NOTIFICATION_EVENTS.NOTIFICATION_BROADCAST,
+          payload: {
+            id: notification.id,
+            type: notification.type,
+            worktree: notification.worktree,
+            message: notification.message,
+            timestamp: notification.timestamp.toISOString(),
+            read: notification.read
+          }
+        }));
+      }
+    });
+  };
+  
+  notificationManager.on('notification:broadcast', handleNotificationBroadcast);
 
   wss.on('connection', (ws: WebSocket, req) => {
     console.log('🔌 New WebSocket connection from:', req.headers.origin || 'unknown');
@@ -302,6 +331,126 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
               ws.send(JSON.stringify({
                 type: 'git:worktree:remove:response',
                 payload: result,
+                id: message.id
+              }));
+            } catch (error) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { error: (error as Error).message },
+                id: message.id
+              }));
+            }
+            break;
+          }
+
+          // Notification handling
+          case NOTIFICATION_EVENTS.NOTIFICATION_SUBSCRIBE: {
+            try {
+              const { worktreePaths = [] } = message.payload || {};
+              notificationManager.subscribe(worktreePaths);
+              
+              ws.send(JSON.stringify({
+                type: NOTIFICATION_EVENTS.NOTIFICATION_STATUS,
+                payload: {
+                  connected: true,
+                  subscriptions: notificationManager.getSubscriptions(),
+                  unreadCount: notificationManager.getUnreadNotifications().length
+                },
+                id: message.id
+              }));
+            } catch (error) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { error: (error as Error).message },
+                id: message.id
+              }));
+            }
+            break;
+          }
+
+          case NOTIFICATION_EVENTS.NOTIFICATION_UNSUBSCRIBE: {
+            try {
+              const { worktreePaths } = message.payload || {};
+              notificationManager.unsubscribe(worktreePaths);
+              
+              ws.send(JSON.stringify({
+                type: NOTIFICATION_EVENTS.NOTIFICATION_STATUS,
+                payload: {
+                  connected: true,
+                  subscriptions: notificationManager.getSubscriptions(),
+                  unreadCount: notificationManager.getUnreadNotifications().length
+                },
+                id: message.id
+              }));
+            } catch (error) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { error: (error as Error).message },
+                id: message.id
+              }));
+            }
+            break;
+          }
+
+          case NOTIFICATION_EVENTS.NOTIFICATION_MARK_READ: {
+            try {
+              const { notificationId } = message.payload;
+              const success = notificationManager.markAsRead(notificationId);
+              
+              ws.send(JSON.stringify({
+                type: 'notification:mark-read:response',
+                payload: { success, notificationId },
+                id: message.id
+              }));
+            } catch (error) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { error: (error as Error).message },
+                id: message.id
+              }));
+            }
+            break;
+          }
+
+          case NOTIFICATION_EVENTS.NOTIFICATION_CLEAR_ALL: {
+            try {
+              const { worktreePath } = message.payload || {};
+              const count = notificationManager.clearAll(worktreePath);
+              
+              ws.send(JSON.stringify({
+                type: 'notification:clear-all:response',
+                payload: { count, worktreePath },
+                id: message.id
+              }));
+            } catch (error) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { error: (error as Error).message },
+                id: message.id
+              }));
+            }
+            break;
+          }
+
+          case 'notification:list': {
+            try {
+              const { worktreePath, unreadOnly } = message.payload || {};
+              const notifications = unreadOnly 
+                ? notificationManager.getUnreadNotifications(worktreePath)
+                : notificationManager.getNotifications(worktreePath);
+              
+              ws.send(JSON.stringify({
+                type: 'notification:list:response',
+                payload: {
+                  notifications: notifications.map(n => ({
+                    id: n.id,
+                    type: n.type,
+                    worktree: n.worktree,
+                    message: n.message,
+                    timestamp: n.timestamp.toISOString(),
+                    read: n.read
+                  }))
+                },
                 id: message.id
               }));
             } catch (error) {

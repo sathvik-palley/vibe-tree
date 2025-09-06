@@ -1,4 +1,4 @@
-import { BaseAdapter } from '@vibetree/core';
+import { BaseAdapter, NOTIFICATION_EVENTS } from '@vibetree/core';
 import type {
   Worktree,
   GitStatus,
@@ -7,7 +7,8 @@ import type {
   ShellResizeResult,
   WorktreeAddResult,
   WorktreeRemoveResult,
-  IDE
+  IDE,
+  ClaudeNotification
 } from '@vibetree/core';
 
 export class WebSocketAdapter extends BaseAdapter {
@@ -198,6 +199,70 @@ export class WebSocketAdapter extends BaseAdapter {
     // Web client can't access local file system
     // Would need to implement a server-side directory browser
     throw new Error('Directory selection not available in web client');
+  }
+
+  async subscribeToNotifications(worktreePaths?: string[]): Promise<{ success: boolean }> {
+    await this.connect();
+    
+    await this.sendMessage(NOTIFICATION_EVENTS.NOTIFICATION_SUBSCRIBE, {
+      worktreePaths: worktreePaths || []
+    });
+    
+    return { success: true };
+  }
+
+  async unsubscribeFromNotifications(worktreePaths?: string[]): Promise<{ success: boolean }> {
+    await this.connect();
+    
+    await this.sendMessage(NOTIFICATION_EVENTS.NOTIFICATION_UNSUBSCRIBE, {
+      worktreePaths
+    });
+    
+    return { success: true };
+  }
+
+  async getNotifications(worktreePath?: string, unreadOnly?: boolean): Promise<ClaudeNotification[]> {
+    await this.connect();
+    
+    const result = await this.sendMessage('notification:list', {
+      worktreePath,
+      unreadOnly
+    }) as any;
+    
+    return result.notifications || [];
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<{ success: boolean }> {
+    await this.connect();
+    
+    const result = await this.sendMessage(NOTIFICATION_EVENTS.NOTIFICATION_MARK_READ, {
+      notificationId
+    }) as any;
+    
+    return { success: result.success || false };
+  }
+
+  async clearAllNotifications(worktreePath?: string): Promise<{ count: number }> {
+    await this.connect();
+    
+    const result = await this.sendMessage(NOTIFICATION_EVENTS.NOTIFICATION_CLEAR_ALL, {
+      worktreePath
+    }) as any;
+    
+    return { count: result.count || 0 };
+  }
+
+  onNotification(callback: (notification: ClaudeNotification) => void): () => void {
+    const handlers = this.eventHandlers.get(NOTIFICATION_EVENTS.NOTIFICATION_BROADCAST) || new Set();
+    handlers.add(callback);
+    this.eventHandlers.set(NOTIFICATION_EVENTS.NOTIFICATION_BROADCAST, handlers);
+
+    return () => {
+      handlers.delete(callback);
+      if (handlers.size === 0) {
+        this.eventHandlers.delete(NOTIFICATION_EVENTS.NOTIFICATION_BROADCAST);
+      }
+    };
   }
 
   async getTheme(): Promise<'light' | 'dark'> {

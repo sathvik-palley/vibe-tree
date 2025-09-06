@@ -8,6 +8,7 @@ import { setupWebSocketHandlers } from './api/websocket';
 import { setupRestRoutes } from './api/rest';
 import { ShellManager } from './services/ShellManager';
 import { AuthService } from './auth/AuthService';
+import { NotificationService } from './services/NotificationService';
 import { getNetworkUrls } from '@vibetree/core';
 
 dotenv.config();
@@ -30,12 +31,15 @@ const wss = new WebSocketServer({ server });
 // Initialize services
 const shellManager = new ShellManager();
 const authService = new AuthService();
+const notificationService = new NotificationService();
+
+const services = { shellManager, authService, notificationService };
 
 // Setup REST routes
-setupRestRoutes(app, { shellManager, authService });
+setupRestRoutes(app, services);
 
 // Setup WebSocket handlers
-setupWebSocketHandlers(wss, { shellManager, authService });
+setupWebSocketHandlers(wss, services);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -62,6 +66,12 @@ app.get('/', (req, res) => {
 
 // Start server
 server.listen(parseInt(PORT.toString()), HOST, async () => {
+  // Start notification service
+  try {
+    await notificationService.start();
+  } catch (error) {
+    console.error('Failed to start notification service:', error);
+  }
   const socketUrls = getNetworkUrls(PORT, HOST);
   const webUrls = getNetworkUrls(3000, HOST); // Web app runs on port 3000
   

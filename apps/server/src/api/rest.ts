@@ -1,6 +1,8 @@
 import { Express } from 'express';
 import { ShellManager } from '../services/ShellManager';
 import { AuthService } from '../auth/AuthService';
+import { NotificationService } from '../services/NotificationService';
+import { claudeHooksManager } from '../services/ClaudeHooksManager';
 import {
   listWorktrees,
   getGitStatus,
@@ -13,6 +15,7 @@ import {
 interface Services {
   shellManager: ShellManager;
   authService: AuthService;
+  notificationService: NotificationService;
 }
 
 export function setupRestRoutes(app: Express, services: Services) {
@@ -189,6 +192,47 @@ export function setupRestRoutes(app: Express, services: Services) {
         projectPaths,
         validationResults,
         defaultProjectPath
+      });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // Claude hooks management endpoints
+  app.post('/api/claude/hooks/setup', async (req, res) => {
+    try {
+      const { projectPaths, includeGlobal = true } = req.body;
+
+      if (includeGlobal) {
+        await claudeHooksManager.ensureGlobalHooks();
+      }
+
+      if (projectPaths && Array.isArray(projectPaths)) {
+        await claudeHooksManager.ensureMultipleProjectHooks(projectPaths);
+      }
+
+      res.json({ 
+        success: true,
+        message: 'Claude hooks setup completed',
+        globalSetup: includeGlobal,
+        projectsSetup: projectPaths?.length || 0
+      });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get('/api/claude/hooks/status', async (req, res) => {
+    try {
+      const { projectPaths } = req.query;
+      const paths = Array.isArray(projectPaths) ? projectPaths as string[] : 
+                   typeof projectPaths === 'string' ? [projectPaths] : [];
+
+      const status = await claudeHooksManager.getHooksStatus(paths);
+      
+      res.json({
+        success: true,
+        ...status
       });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });

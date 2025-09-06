@@ -7,7 +7,8 @@ import type {
   ShellResizeResult,
   WorktreeAddResult,
   WorktreeRemoveResult,
-  IDE
+  IDE,
+  ClaudeNotification
 } from '@vibetree/core';
 
 export class IPCAdapter extends BaseAdapter {
@@ -69,6 +70,34 @@ export class IPCAdapter extends BaseAdapter {
 
   async selectDirectory(): Promise<string | undefined> {
     return window.electronAPI.dialog.selectDirectory();
+  }
+
+  async subscribeToNotifications(worktreePaths?: string[]): Promise<{ success: boolean }> {
+    // For desktop, we'll need to implement this in the main process
+    // For now, assume it's always successful since desktop gets notifications via server
+    return { success: true };
+  }
+
+  async unsubscribeFromNotifications(worktreePaths?: string[]): Promise<{ success: boolean }> {
+    // For desktop, notifications are handled via the notification service
+    return { success: true };
+  }
+
+  async getNotifications(worktreePath?: string, unreadOnly?: boolean): Promise<ClaudeNotification[]> {
+    // This would need to be implemented in the main process to communicate with the server
+    return window.electronAPI.notifications?.getNotifications(worktreePath, unreadOnly) || [];
+  }
+
+  async markNotificationAsRead(notificationId: string): Promise<{ success: boolean }> {
+    return window.electronAPI.notifications?.markAsRead(notificationId) || { success: false };
+  }
+
+  async clearAllNotifications(worktreePath?: string): Promise<{ count: number }> {
+    return window.electronAPI.notifications?.clearAll(worktreePath) || { count: 0 };
+  }
+
+  onNotification(callback: (notification: ClaudeNotification) => void): () => void {
+    return window.electronAPI.notifications?.onNotification(callback) || (() => {});
   }
 
   async getTheme(): Promise<'light' | 'dark'> {

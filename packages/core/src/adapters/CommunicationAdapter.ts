@@ -9,6 +9,7 @@ import {
   WorktreeRemoveResult,
   IDE
 } from '../types';
+import { ClaudeNotification } from '../notifications';
 
 /**
  * Unified communication interface for VibeTree applications.
@@ -128,6 +129,45 @@ export interface CommunicationAdapter {
    * @returns Selected directory path or undefined if cancelled
    */
   selectDirectory(): Promise<string | undefined>;
+
+  /**
+   * Subscribe to notifications for specific worktrees
+   * @param worktreePaths - Array of worktree paths to subscribe to, empty array for all
+   */
+  subscribeToNotifications(worktreePaths?: string[]): Promise<{ success: boolean }>;
+
+  /**
+   * Unsubscribe from notifications
+   * @param worktreePaths - Array of worktree paths to unsubscribe from, empty for all
+   */
+  unsubscribeFromNotifications(worktreePaths?: string[]): Promise<{ success: boolean }>;
+
+  /**
+   * Get list of notifications
+   * @param worktreePath - Optional worktree path filter
+   * @param unreadOnly - Only return unread notifications
+   * @returns Array of notifications
+   */
+  getNotifications(worktreePath?: string, unreadOnly?: boolean): Promise<ClaudeNotification[]>;
+
+  /**
+   * Mark a notification as read
+   * @param notificationId - ID of the notification to mark as read
+   */
+  markNotificationAsRead(notificationId: string): Promise<{ success: boolean }>;
+
+  /**
+   * Clear all notifications
+   * @param worktreePath - Optional worktree path filter
+   */
+  clearAllNotifications(worktreePath?: string): Promise<{ count: number }>;
+
+  /**
+   * Subscribe to incoming notification events
+   * @param callback - Function to call when a new notification is received
+   * @returns Unsubscribe function
+   */
+  onNotification(callback: (notification: ClaudeNotification) => void): () => void;
   
   /**
    * Get the current system theme preference
@@ -166,6 +206,14 @@ export abstract class BaseAdapter implements CommunicationAdapter {
   abstract openInIDE(ideName: string, projectPath: string): Promise<{ success: boolean; error?: string }>;
   
   abstract selectDirectory(): Promise<string | undefined>;
+  
+  abstract subscribeToNotifications(worktreePaths?: string[]): Promise<{ success: boolean }>;
+  abstract unsubscribeFromNotifications(worktreePaths?: string[]): Promise<{ success: boolean }>;
+  abstract getNotifications(worktreePath?: string, unreadOnly?: boolean): Promise<ClaudeNotification[]>;
+  abstract markNotificationAsRead(notificationId: string): Promise<{ success: boolean }>;
+  abstract clearAllNotifications(worktreePath?: string): Promise<{ count: number }>;
+  abstract onNotification(callback: (notification: ClaudeNotification) => void): () => void;
+  
   abstract getTheme(): Promise<'light' | 'dark'>;
   abstract onThemeChange(callback: (theme: 'light' | 'dark') => void): () => void;
 }
