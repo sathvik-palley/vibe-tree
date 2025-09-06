@@ -100,7 +100,9 @@ export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalP
       // Handle screen clearing properly
       windowsMode: false,
       // Allow proposed API for Unicode11 addon
-      allowProposedApi: true
+      allowProposedApi: true,
+      // Enable Option key as Meta on macOS
+      macOptionIsMeta: true
     });
 
     // Add addons
