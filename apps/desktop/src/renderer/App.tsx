@@ -2,19 +2,18 @@ import { useEffect, useState } from 'react';
 import { AppHeader } from './components/AppHeader';
 import { ProjectSelector } from './components/ProjectSelector';
 import { ProjectWorkspace } from './components/ProjectWorkspace';
-import { NotificationToasts } from './components/NotificationToasts';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/toaster';
 import { ProjectProvider, useProjects } from './contexts/ProjectContext';
-import { useNotificationToasts } from './hooks/useNotificationToasts';
+import { useSystemNotifications } from './hooks/useNotificationToasts';
 import { Plus, X } from 'lucide-react';
 
 function AppContent() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [showProjectSelector, setShowProjectSelector] = useState(false);
   const { projects, activeProjectId, addProject, removeProject, setActiveProject } = useProjects();
-  const { toasts, dismissToast } = useNotificationToasts(true);
+  useSystemNotifications(true);
 
   useEffect(() => {
     // Get initial theme from localStorage or system
@@ -110,7 +109,6 @@ function AppContent() {
         </Tabs>
       )}
 
-      <NotificationToasts toasts={toasts} onDismiss={dismissToast} />
       <Toaster />
     </div>
   );

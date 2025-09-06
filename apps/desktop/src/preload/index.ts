@@ -52,6 +52,10 @@ const api = {
   },
   dialog: {
     selectDirectory: () => ipcRenderer.invoke('dialog:select-directory')
+  },
+  notification: {
+    show: (options: { title: string; body: string; type: 'claude-finished' | 'claude-needs-input' }) =>
+      ipcRenderer.invoke('notification:show', options)
   }
 };
 

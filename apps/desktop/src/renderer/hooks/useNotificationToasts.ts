@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { ClaudeNotification } from '@vibetree/core';
 
 // Sound utilities
@@ -36,32 +36,10 @@ function playNotificationSound(type: 'claude-finished' | 'claude-needs-input') {
     console.log(`🔊 Playing ${type} notification sound`);
   } catch (error) {
     console.log('Could not play notification sound:', error);
-    
-    // Fallback: try simple audio element
-    try {
-      const audio = new Audio();
-      // Simple data URL for a short beep
-      audio.src = 'data:audio/wav;base64,UklGRjIAAABXQVZFZm10IBAAAAABAQABACYAAAAAAAAAAAEACAAZGF0YQ4AAACAAACAAACAAACAAACAAAAAAAAAAAAAAAAAAAAAAA==';
-      audio.volume = 0.3;
-      audio.play().catch(e => console.log('Audio element fallback also failed:', e));
-    } catch (fallbackError) {
-      console.log('All audio methods failed:', fallbackError);
-    }
   }
 }
 
-interface NotificationToast {
-  id: string;
-  type: 'claude-finished' | 'claude-needs-input';
-  message: string;
-  worktree: string;
-  timestamp: Date;
-  visible: boolean;
-}
-
-export function useNotificationToasts(connected: boolean) {
-  const [toasts, setToasts] = useState<NotificationToast[]>([]);
-
+export function useSystemNotifications(connected: boolean) {
   useEffect(() => {
     if (!connected) return;
 
@@ -69,47 +47,42 @@ export function useNotificationToasts(connected: boolean) {
     const websocket = new WebSocket('ws://localhost:3002');
     
     websocket.onopen = () => {
-      console.log('🔔 Toast notification WebSocket connected');
+      console.log('🔔 System notification WebSocket connected');
       // Subscribe to notifications
       websocket.send(JSON.stringify({
         type: 'notification:subscribe',
         payload: {}
       }));
+      console.log('📡 Subscribed to notifications');
     };
 
     websocket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
+        console.log('📨 WebSocket message received:', message);
         
         if (message.type === 'notification:broadcast' && message.payload) {
           const notification = message.payload as ClaudeNotification;
+          console.log('🔔 Processing notification:', notification);
           
-          // Create toast
-          const toast: NotificationToast = {
-            id: notification.id,
-            type: notification.type,
-            message: notification.message || `Claude ${notification.type.replace('claude-', '')} in worktree`,
-            worktree: notification.worktree,
-            timestamp: new Date(notification.timestamp),
-            visible: true
-          };
+          // Show system notification with better formatting
+          const title = notification.type === 'claude-finished' ? 'Claude Finished' : 'Claude Needs Input';
+          const pathParts = notification.worktree.split('/');
+          const projectName = pathParts[pathParts.length - 2] || 'Unknown Project'; // Parent directory (vibe-tree)
+          const branchOrWorktree = pathParts[pathParts.length - 1] || 'main'; // Last part (branch/worktree name)
+          
+          // If it's the main repo, show just project name, otherwise show project + branch
+          const displayName = branchOrWorktree === projectName ? projectName : `${projectName}/${branchOrWorktree}`;
+          const body = notification.message || `Task completed in ${displayName}`;
+          
+          window.electronAPI.notification.show({
+            title: `${title} - ${displayName}`,
+            body,
+            type: notification.type
+          });
 
-          setToasts(prev => [...prev, toast]);
-
-          // Play notification sound
+          // Play custom notification sound
           playNotificationSound(notification.type);
-
-          // Auto-hide after 5 seconds
-          setTimeout(() => {
-            setToasts(prev => prev.map(t => 
-              t.id === toast.id ? { ...t, visible: false } : t
-            ));
-            
-            // Remove after fade out
-            setTimeout(() => {
-              setToasts(prev => prev.filter(t => t.id !== toast.id));
-            }, 300);
-          }, 5000);
         }
       } catch (error) {
         console.error('Failed to parse notification message:', error);
@@ -117,27 +90,15 @@ export function useNotificationToasts(connected: boolean) {
     };
 
     websocket.onclose = () => {
-      console.log('🔔 Toast notification WebSocket disconnected');
+      console.log('🔔 System notification WebSocket disconnected');
     };
 
     websocket.onerror = (error) => {
-      console.error('🔔 Toast notification WebSocket error:', error);
+      console.error('🔔 System notification WebSocket error:', error);
     };
 
     return () => {
       websocket.close();
     };
   }, [connected]);
-
-  const dismissToast = (id: string) => {
-    setToasts(prev => prev.map(t => 
-      t.id === id ? { ...t, visible: false } : t
-    ));
-    
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 300);
-  };
-
-  return { toasts, dismissToast };
 }

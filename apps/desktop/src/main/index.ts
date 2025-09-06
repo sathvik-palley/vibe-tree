@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, dialog, Notification } from 'electron';
 import path from 'path';
 import { shellProcessManager } from './shell-manager';
 import './ide-detector';
@@ -31,7 +31,7 @@ function createWindow() {
 
   // In development, load from Vite dev server
   if (!app.isPackaged) {
-    mainWindow.loadURL('http://localhost:5173');
+    mainWindow.loadURL('http://localhost:5174');
     // Open DevTools in development
     mainWindow.webContents.openDevTools();
   } else {
@@ -105,6 +105,38 @@ ipcMain.handle('dialog:select-directory', async () => {
     properties: ['openDirectory']
   });
   return result.filePaths[0];
+});
+
+// Notification handling
+ipcMain.handle('notification:show', async (_, options: { title: string; body: string; type: 'claude-finished' | 'claude-needs-input' }) => {
+  if (!Notification.isSupported()) {
+    return { success: false, error: 'Notifications not supported' };
+  }
+
+  try {
+    const notification = new Notification({
+      title: options.title,
+      body: options.body,
+      icon: path.join(__dirname, '../../assets/icons/VibeTree.png'),
+      silent: false // Enable system sound
+    });
+
+    notification.on('click', () => {
+      // Focus the app when notification is clicked
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.focus();
+        mainWindow.show();
+      }
+    });
+
+    notification.show();
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 });
 
 // Parsing functions are now imported from @vibetree/core
