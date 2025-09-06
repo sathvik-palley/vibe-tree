@@ -108,7 +108,11 @@ export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalP
     fitAddonRef.current = fitAddon;
     term.loadAddon(fitAddon);
     
-    const webLinksAddon = new WebLinksAddon();
+    // Configure WebLinksAddon with custom handler for opening links
+    const webLinksAddon = new WebLinksAddon((event, uri) => {
+      // Open in default browser using Electron's shell.openExternal
+      window.electronAPI.shell.openExternal(uri);
+    });
     term.loadAddon(webLinksAddon);
     
     const serializeAddon = new SerializeAddon();
