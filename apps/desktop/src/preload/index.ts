@@ -26,6 +26,8 @@ const api = {
       ipcRenderer.invoke('shell:status', processId),
     getBuffer: (processId: string) => 
       ipcRenderer.invoke('shell:get-buffer', processId),
+    openExternal: (url: string) =>
+      ipcRenderer.invoke('shell:open-external', url),
     onOutput: (processId: string, callback: (data: string) => void) => {
       const channel = `shell:output:${processId}`;
       const listener = (_: unknown, data: string) => callback(data);
