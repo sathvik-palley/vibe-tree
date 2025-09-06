@@ -17,6 +17,8 @@ release/
 # Misc
 .DS_Store
 *.pem
+.dev-port
+.web-port
 
 # Debug
 npm-debug.log*

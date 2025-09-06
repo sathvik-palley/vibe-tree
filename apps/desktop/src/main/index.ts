@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, dialog, shell } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { shellProcessManager } from './shell-manager';
 import './ide-detector';
 import {
@@ -31,7 +32,16 @@ function createWindow() {
 
   // In development, load from Vite dev server
   if (!app.isPackaged) {
-    mainWindow.loadURL('http://localhost:5173');
+    let port = '3000';
+    try {
+      const portFile = path.join(__dirname, '../../.dev-port');
+      if (fs.existsSync(portFile)) {
+        port = fs.readFileSync(portFile, 'utf8').trim();
+      }
+    } catch (error) {
+      console.warn('Could not read dev port file, using default port 3000');
+    }
+    mainWindow.loadURL(`http://localhost:${port}`);
     // Open DevTools in development
     mainWindow.webContents.openDevTools();
   } else {

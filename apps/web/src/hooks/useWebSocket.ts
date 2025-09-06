@@ -8,6 +8,7 @@ import {
   onGlobalAdapterConnected,
   onGlobalAdapterDisconnected
 } from '../adapters/globalWebSocketAdapter';
+import { getServerWebSocketUrl } from '../services/portDiscovery';
 
 export function useWebSocket() {
   const { 
@@ -29,27 +30,8 @@ export function useWebSocket() {
     setError(null);
 
     try {
-      // Get WebSocket URL from environment or construct from current host
-      let wsUrl = import.meta.env.VITE_WS_URL;
-      
-      console.log('🔍 Environment VITE_WS_URL:', wsUrl);
-      console.log('🔍 Current window.location:', window.location);
-      
-      if (!wsUrl) {
-        // If accessing from network (not localhost), use the same host but port 3002
-        const isLocalhost = window.location.hostname === 'localhost' || 
-                          window.location.hostname === '127.0.0.1';
-        
-        console.log('🔍 Is localhost?', isLocalhost);
-        
-        if (isLocalhost) {
-          wsUrl = 'ws://localhost:3002';
-        } else {
-          // Use the same host but different port for network access
-          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          wsUrl = `${protocol}//${window.location.hostname}:3002`;
-        }
-      }
+      // Get WebSocket URL using dynamic port discovery
+      const wsUrl = await getServerWebSocketUrl();
       
       console.log('🔌 Attempting WebSocket connection to:', wsUrl);
       
