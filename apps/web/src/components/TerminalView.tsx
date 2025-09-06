@@ -29,7 +29,7 @@ export function TerminalView({ worktreePath }: TerminalViewProps) {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const terminalRef = useRef<XTerm | null>(null);
   const cleanupRef = useRef<(() => void)[]>([]);
-  const saveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const saveIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!selectedWorktree) {
