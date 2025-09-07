@@ -261,7 +261,7 @@ export function WorktreePanel({ projectPath, selectedWorktree, onSelectWorktree,
             }}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmDeleteWorktree}>
+            <Button variant="default" className="bg-red-600 hover:bg-red-700" onClick={confirmDeleteWorktree}>
               Delete Permanently
             </Button>
           </DialogFooter>

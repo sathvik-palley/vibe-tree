@@ -109,7 +109,7 @@ export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalP
     term.loadAddon(fitAddon);
     
     // Configure WebLinksAddon with custom handler for opening links
-    const webLinksAddon = new WebLinksAddon((event, uri) => {
+    const webLinksAddon = new WebLinksAddon((_event, uri) => {
       // Open in default browser using Electron's shell.openExternal
       window.electronAPI.shell.openExternal(uri);
     });

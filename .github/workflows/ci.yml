@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, add-workflow-build ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: [22.12.0]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Python (for node-gyp)
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8.14.0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'pnpm'
+    
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+    
+    - name: Build packages (core and ui)
+      run: pnpm build:deps
+    
+    - name: Typecheck
+      run: pnpm typecheck
+    
+    - name: Lint
+      run: pnpm lint
+    
+    - name: Build all
+      run: pnpm build
+    
+    # Build specific apps to ensure they work
+    - name: Build web app
+      run: pnpm --filter @vibetree/web build
+    
+    - name: Build server
+      run: pnpm --filter @vibetree/server build
+      
+    # Desktop app build only on non-Linux due to potential GUI dependencies
+    - name: Build desktop app (non-Linux)
+      if: matrix.os != 'ubuntu-latest'
+      run: pnpm --filter @vibetree/desktop build
