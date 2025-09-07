@@ -143,18 +143,44 @@ export const Terminal: React.FC<TerminalProps> = ({
       convertEol = true
     } = config;
 
-    const term = new XTerm({
-      theme: getTerminalTheme(theme),
+    // Detect if running on mobile device
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    // Base terminal configuration shared by all platforms
+    const baseTerminalConfig = {
       fontFamily,
-      fontSize,
       lineHeight: 1.2,
       cursorBlink,
       allowTransparency: false,
-      convertEol,
-      scrollback,
       tabStopWidth,
       windowsMode: false,
-      allowProposedApi: true
+      allowProposedApi: true,
+      convertEol, // Required for proper line ending handling
+      fastScrollModifier: 'shift' as const
+    };
+
+    // Desktop-specific terminal configuration
+    const desktopTerminalConfig = {
+      ...baseTerminalConfig,
+      fontSize,
+      scrollback,
+      rendererType: 'canvas' as const // Better performance on desktop
+    };
+
+    // Mobile-specific terminal configuration
+    const mobileTerminalConfig = {
+      ...baseTerminalConfig,
+      fontSize: 12, // Smaller font on mobile for better readability
+      scrollback: 1000, // Less scrollback on mobile for performance
+      rendererType: 'dom' as const // Required for mobile compatibility
+    };
+
+    // Select appropriate configuration based on platform
+    const terminalConfig = isMobile ? mobileTerminalConfig : desktopTerminalConfig;
+
+    const term = new XTerm({
+      ...terminalConfig,
+      theme: getTerminalTheme(theme)
     });
 
     // Load addons for enhanced functionality
