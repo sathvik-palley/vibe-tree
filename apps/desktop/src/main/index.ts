@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, dialog } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, dialog, shell } from 'electron';
 import path from 'path';
 import { shellProcessManager } from './shell-manager';
 import './ide-detector';
@@ -105,6 +105,11 @@ ipcMain.handle('dialog:select-directory', async () => {
     properties: ['openDirectory']
   });
   return result.filePaths[0];
+});
+
+// Open external links
+ipcMain.handle('shell:open-external', async (_, url: string) => {
+  await shell.openExternal(url);
 });
 
 // Parsing functions are now imported from @vibetree/core
