@@ -33,12 +33,16 @@ class DesktopShellManager {
         if (result.isNew) {
           // Add output listener
           this.sessionManager.addOutputListener(result.processId, listenerId, (data) => {
-            event.sender.send(`shell:output:${result.processId}`, data);
+            if (!event.sender.isDestroyed()) {
+              event.sender.send(`shell:output:${result.processId}`, data);
+            }
           });
 
           // Add exit listener
           this.sessionManager.addExitListener(result.processId, listenerId, (exitCode) => {
-            event.sender.send(`shell:exit:${result.processId}`, exitCode);
+            if (!event.sender.isDestroyed()) {
+              event.sender.send(`shell:exit:${result.processId}`, exitCode);
+            }
           });
         } else {
           // For existing sessions, we need to update the listener to use the current event.sender
@@ -48,11 +52,15 @@ class DesktopShellManager {
           
           // Re-add with current sender, but skip buffer replay for existing sessions
           this.sessionManager.addOutputListener(result.processId, listenerId, (data) => {
-            event.sender.send(`shell:output:${result.processId}`, data);
+            if (!event.sender.isDestroyed()) {
+              event.sender.send(`shell:output:${result.processId}`, data);
+            }
           }, true); // Skip replay for existing sessions
 
           this.sessionManager.addExitListener(result.processId, listenerId, (exitCode) => {
-            event.sender.send(`shell:exit:${result.processId}`, exitCode);
+            if (!event.sender.isDestroyed()) {
+              event.sender.send(`shell:exit:${result.processId}`, exitCode);
+            }
           });
         }
       }
