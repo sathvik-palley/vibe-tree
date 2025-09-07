@@ -55,7 +55,20 @@ const api = {
   },
   notification: {
     show: (options: { title: string; body: string; type: 'claude-finished' | 'claude-needs-input' }) =>
-      ipcRenderer.invoke('notification:show', options)
+      ipcRenderer.invoke('notification:show', options),
+    onReceived: (callback: (notification: { id: string; type: 'claude-finished' | 'claude-needs-input'; worktree: string; message?: string; timestamp: string }) => void) => {
+      const listener = (_: any, notification: any) => callback(notification);
+      ipcRenderer.on('notification:received', listener);
+      return () => ipcRenderer.removeListener('notification:received', listener);
+    }
+  },
+  claude: {
+    setupHooks: (projectPath: string) => 
+      ipcRenderer.invoke('claude:setup-hooks', projectPath),
+    setupGlobalHooks: () => 
+      ipcRenderer.invoke('claude:setup-global-hooks'),
+    getHooksStatus: (projectPaths: string[]) => 
+      ipcRenderer.invoke('claude:hooks-status', projectPaths)
   }
 };
 

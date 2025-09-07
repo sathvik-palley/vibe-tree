@@ -32,7 +32,7 @@ export function setupRestRoutes(app: Express, services: Services) {
   // Generate QR code for device pairing
   app.get('/api/auth/qr', async (req, res) => {
     try {
-      const port = parseInt(process.env.PORT || '3001');
+      const port = parseInt(process.env.PORT || '3002');
       const result = await authService.generateQRCode(port);
       res.json(result);
     } catch (error) {
@@ -81,6 +81,19 @@ export function setupRestRoutes(app: Express, services: Services) {
   app.post('/api/git/worktrees', async (req, res) => {
     try {
       const worktrees = await listWorktrees(req.body.projectPath);
+      res.json(worktrees);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get('/api/git/worktrees', async (req, res) => {
+    try {
+      const projectPath = req.query.projectPath as string;
+      if (!projectPath) {
+        return res.status(400).json({ error: 'projectPath query parameter is required' });
+      }
+      const worktrees = await listWorktrees(projectPath);
       res.json(worktrees);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
@@ -222,20 +235,5 @@ export function setupRestRoutes(app: Express, services: Services) {
     }
   });
 
-  app.get('/api/claude/hooks/status', async (req, res) => {
-    try {
-      const { projectPaths } = req.query;
-      const paths = Array.isArray(projectPaths) ? projectPaths as string[] : 
-                   typeof projectPaths === 'string' ? [projectPaths] : [];
 
-      const status = await claudeHooksManager.getHooksStatus(paths);
-      
-      res.json({
-        success: true,
-        ...status
-      });
-    } catch (error) {
-      res.status(500).json({ error: (error as Error).message });
-    }
-  });
 }

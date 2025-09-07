@@ -1,6 +1,73 @@
 import { create } from 'zustand';
 import { Worktree } from '@vibetree/core';
 
+
+// Helper function to set up Claude hooks for a project and all its worktrees
+async function setupClaudeHooksForProject(projectPath: string) {
+  try {
+    console.log(`🔧 Setting up Claude hooks for project: ${projectPath}`);
+    
+    // Get all worktrees for the project
+    const worktreePaths = await getProjectWorktrees(projectPath);
+    
+    // Set up hooks for main project and all worktrees
+    const response = await fetch('http://localhost:3002/api/claude/hooks/setup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        projectPaths: [projectPath, ...worktreePaths],
+        includeGlobal: false
+      }),
+    });
+
+    if (response.ok) {
+      console.log(`✅ Claude hooks configured for ${projectPath} and ${worktreePaths.length} worktrees`);
+    }
+  } catch (error) {
+    // Silently continue if hook setup fails
+  }
+}
+
+// Helper function to get all worktree paths for a project
+async function getProjectWorktrees(projectPath: string): Promise<string[]> {
+  try {
+    const response = await fetch(`http://localhost:3002/api/git/worktrees?projectPath=${encodeURIComponent(projectPath)}`);
+    if (response.ok) {
+      const worktrees = await response.json() as Array<{ path: string; branch: string }>;
+      return worktrees
+        .filter(w => w.path !== projectPath) // Exclude main project
+        .map(w => w.path);
+    }
+  } catch (error) {
+    console.log(`Could not list worktrees for ${projectPath}, setting up main directory only`);
+  }
+  return [];
+}
+
+// Helper function to set up Claude hooks for multiple projects
+async function setupClaudeHooksForMultipleProjects(projectPaths: string[]) {
+  try {
+    const response = await fetch('http://localhost:3002/api/claude/hooks/setup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        projectPaths,
+        includeGlobal: false
+      }),
+    });
+
+    if (response.ok) {
+      console.log(`✅ Claude hooks configured for ${projectPaths.length} projects`);
+    }
+  } catch (error) {
+    // Silently continue if hook setup fails
+  }
+}
+
 interface Project {
   id: string;
   path: string;
@@ -84,6 +151,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       projects: [...state.projects, newProject],
       activeProjectId: id
     }));
+
+    // Auto-configure Claude hooks for this project
+    setupClaudeHooksForProject(path);
+    
     return id;
   },
 
@@ -120,6 +191,9 @@ export const useAppStore = create<AppState>((set, get) => ({
       set((state) => ({
         projects: [...state.projects, ...newProjects]
       }));
+
+      // Auto-configure Claude hooks for all new projects
+      setupClaudeHooksForMultipleProjects(newProjects.map(p => p.path));
     }
 
     return addedIds;

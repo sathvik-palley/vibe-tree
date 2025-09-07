@@ -65,6 +65,12 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
 
     setProjects(prev => [...prev, newProject]);
     setActiveProjectId(id);
+
+    // Auto-configure Claude hooks for this project
+    window.electronAPI.claude.setupHooks(path).catch(error => {
+      console.error('Failed to setup Claude hooks:', error);
+    });
+
     return id;
   };
 

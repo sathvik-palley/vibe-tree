@@ -1,6 +1,8 @@
 import { app, BrowserWindow, ipcMain, nativeTheme, dialog, Notification } from 'electron';
 import path from 'path';
 import { shellProcessManager } from './shell-manager';
+import { DesktopNotificationService } from './notification-service';
+import { DesktopClaudeHooksManager } from './claude-hooks-manager';
 import './ide-detector';
 import {
   listWorktrees,
@@ -12,6 +14,8 @@ import {
 } from '@vibetree/core';
 
 let mainWindow: BrowserWindow | null = null;
+let notificationService: DesktopNotificationService | null = null;
+let claudeHooksManager: DesktopClaudeHooksManager | null = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -31,7 +35,7 @@ function createWindow() {
 
   // In development, load from Vite dev server
   if (!app.isPackaged) {
-    mainWindow.loadURL('http://localhost:5174');
+    mainWindow.loadURL('http://localhost:5173');
     // Open DevTools in development
     mainWindow.webContents.openDevTools();
   } else {
@@ -40,14 +44,30 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    if (notificationService) {
+      notificationService.stop();
+      notificationService = null;
+    }
   });
+
+  // Start desktop notification service
+  notificationService = new DesktopNotificationService(mainWindow);
+  notificationService.start().catch(error => {
+    console.error('Failed to start desktop notification service:', error);
+  });
+
+  // Initialize Claude hooks manager
+  claudeHooksManager = new DesktopClaudeHooksManager();
 }
 
 app.whenReady().then(createWindow);
 
-// Clean up shell processes on quit
+// Clean up shell processes and notifications on quit
 app.on('before-quit', () => {
   shellProcessManager.cleanup();
+  if (notificationService) {
+    notificationService.stop();
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -88,7 +108,29 @@ ipcMain.handle('git:worktree-remove', async (_, projectPath: string, worktreePat
   return removeWorktree(projectPath, worktreePath, branchName);
 });
 
-// Claude process manager is initialized in claude-manager.ts
+// Claude hooks management
+ipcMain.handle('claude:setup-hooks', async (_, projectPath: string) => {
+  if (!claudeHooksManager) {
+    throw new Error('Claude hooks manager not initialized');
+  }
+  await claudeHooksManager.ensureProjectHooks(projectPath);
+  return { success: true };
+});
+
+ipcMain.handle('claude:setup-global-hooks', async () => {
+  if (!claudeHooksManager) {
+    throw new Error('Claude hooks manager not initialized');
+  }
+  await claudeHooksManager.ensureGlobalHooks();
+  return { success: true };
+});
+
+ipcMain.handle('claude:hooks-status', async (_, projectPaths: string[]) => {
+  if (!claudeHooksManager) {
+    return { globalConfigured: false, projectsConfigured: [] };
+  }
+  return claudeHooksManager.getHooksStatus(projectPaths);
+});
 
 // Theme handling
 ipcMain.handle('theme:get', () => {

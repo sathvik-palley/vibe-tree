@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import { Button } from './components/ui/button';
 import { Toaster } from './components/ui/toaster';
 import { ProjectProvider, useProjects } from './contexts/ProjectContext';
-import { useSystemNotifications } from './hooks/useNotificationToasts';
+import { useSystemNotifications } from './hooks/useSystemNotifications';
 import { Plus, X } from 'lucide-react';
 
 function AppContent() {
