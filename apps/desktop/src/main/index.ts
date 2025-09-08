@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, dialog, Notification } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, dialog, Notification, shell } from 'electron';
 import path from 'path';
 import { shellProcessManager } from './shell-manager';
 import { DesktopNotificationService } from './notification-service';
@@ -179,6 +179,11 @@ ipcMain.handle('notification:show', async (_, options: { title: string; body: st
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
+});
+
+// Open external links
+ipcMain.handle('shell:open-external', async (_, url: string) => {
+  await shell.openExternal(url);
 });
 
 // Parsing functions are now imported from @vibetree/core

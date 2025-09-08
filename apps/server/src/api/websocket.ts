@@ -100,17 +100,22 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
         return;
       }
     } else {
-      // No authentication provided - allow localhost for development
-      const isLocalhost = req.headers.host?.includes('localhost') || 
-                         req.headers.host?.includes('127.0.0.1');
-      
-      if (isLocalhost && process.env.NODE_ENV !== 'production') {
+      // No authentication provided
+      // In development, allow localhost by default and optionally allow LAN via env flag
+      const isLocalhost = req.headers.host?.includes('localhost') ||
+                          req.headers.host?.includes('127.0.0.1');
+      const allowLanDev = process.env.ALLOW_INSECURE_NETWORK === '1' ||
+                          process.env.ALLOW_INSECURE_LAN === '1' ||
+                          process.env.ALLOW_NETWORK_DEV === '1';
+
+      if (process.env.NODE_ENV !== 'production' && (isLocalhost || allowLanDev)) {
         authenticated = true;
-        deviceId = 'localhost-dev';
+        deviceId = isLocalhost ? 'localhost-dev' : 'lan-dev';
         ws.send(JSON.stringify({
           type: 'auth:success',
-          payload: { deviceId: 'localhost-dev' }
+          payload: { deviceId }
         }));
+        console.log(`🔓 Dev auth: allowing ${isLocalhost ? 'localhost' : 'LAN'} connection without token`);
       } else {
         ws.send(JSON.stringify({
           type: 'auth:error',

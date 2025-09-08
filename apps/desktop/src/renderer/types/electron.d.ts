@@ -28,6 +28,7 @@ export interface ElectronAPI {
     resize: (processId: string, cols: number, rows: number) => Promise<{ success: boolean; error?: string }>;
     status: (processId: string) => Promise<{ running: boolean }>;
     getBuffer: (processId: string) => Promise<{ success: boolean; buffer?: string | null; error?: string }>;
+    openExternal: (url: string) => Promise<void>;
     onOutput: (processId: string, callback: (data: string) => void) => () => void;
     onExit: (processId: string, callback: (code: number) => void) => () => void;
   };
@@ -37,7 +38,7 @@ export interface ElectronAPI {
   };
   theme: {
     get: () => Promise<'light' | 'dark'>;
-    onChange: (callback: (theme: 'light' | 'dark') => void) => void;
+    onChange: (callback: (theme: 'light' | 'dark') => void) => () => void;
   };
   dialog: {
     selectDirectory: () => Promise<string | undefined>;

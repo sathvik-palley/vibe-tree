@@ -41,15 +41,15 @@ export class IPCAdapter extends BaseAdapter {
   }
 
   async getGitStatus(worktreePath: string): Promise<GitStatus[]> {
-    return window.electronAPI.git.getStatus(worktreePath);
+    return window.electronAPI.git.status(worktreePath);
   }
 
   async getGitDiff(worktreePath: string, filePath?: string): Promise<string> {
-    return window.electronAPI.git.getDiff(worktreePath, filePath);
+    return window.electronAPI.git.diff(worktreePath, filePath);
   }
 
   async getGitDiffStaged(worktreePath: string, filePath?: string): Promise<string> {
-    return window.electronAPI.git.getDiffStaged(worktreePath, filePath);
+    return window.electronAPI.git.diffStaged(worktreePath, filePath);
   }
 
   async addWorktree(projectPath: string, branchName: string): Promise<WorktreeAddResult> {

@@ -13,7 +13,7 @@ import { Sun, Moon, Plus, X, Terminal, GitBranch, CheckCircle } from 'lucide-rea
 import { autoLoadProjects } from './services/projectValidation';
 
 function App() {
-  const { projects, activeProjectId, addProject, addProjects, removeProject, setActiveProject, getActiveProject, setSelectedTab, theme, setTheme, connected } = useAppStore();
+  const { projects, activeProjectId, addProject, addProjects, removeProject, setActiveProject, setSelectedTab, theme, setTheme, connected } = useAppStore();
   const { connect } = useWebSocket();
   const { toasts, dismissToast } = useNotificationToasts(connected);
   const [showProjectSelector, setShowProjectSelector] = useState(false);
@@ -21,7 +21,7 @@ function App() {
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   
-  const activeProject = getActiveProject();
+  // const activeProject = getActiveProject();
 
   useEffect(() => {
     // Auto-connect on mount
