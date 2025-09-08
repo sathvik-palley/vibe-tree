@@ -26,40 +26,61 @@ class DesktopShellManager {
       );
 
       if (result.success && result.processId) {
+        const processId = result.processId;
         const listenerId = `electron-${event.sender.id}`;
         
         // Only add listeners for new sessions or if they don't exist
         // For existing sessions, listeners should already be set up
         if (result.isNew) {
           // Add output listener
-          this.sessionManager.addOutputListener(result.processId, listenerId, (data) => {
-            if (!event.sender.isDestroyed()) {
-              event.sender.send(`shell:output:${result.processId}`, data);
+          this.sessionManager.addOutputListener(processId, listenerId, (data) => {
+            try {
+              if (!event.sender.isDestroyed()) {
+                event.sender.send(`shell:output:${processId}`, data);
+              }
+            } catch (error) {
+              // Frame was disposed between check and send - remove this listener
+              this.sessionManager.removeOutputListener(processId, listenerId);
             }
           });
 
           // Add exit listener
-          this.sessionManager.addExitListener(result.processId, listenerId, (exitCode) => {
-            if (!event.sender.isDestroyed()) {
-              event.sender.send(`shell:exit:${result.processId}`, exitCode);
+          this.sessionManager.addExitListener(processId, listenerId, (exitCode) => {
+            try {
+              if (!event.sender.isDestroyed()) {
+                event.sender.send(`shell:exit:${processId}`, exitCode);
+              }
+            } catch (error) {
+              // Frame was disposed between check and send - remove this listener
+              this.sessionManager.removeExitListener(processId, listenerId);
             }
           });
         } else {
           // For existing sessions, we need to update the listener to use the current event.sender
           // because the renderer might have changed
-          this.sessionManager.removeOutputListener(result.processId, listenerId);
-          this.sessionManager.removeExitListener(result.processId, listenerId);
+          this.sessionManager.removeOutputListener(processId, listenerId);
+          this.sessionManager.removeExitListener(processId, listenerId);
           
           // Re-add with current sender, but skip buffer replay for existing sessions
-          this.sessionManager.addOutputListener(result.processId, listenerId, (data) => {
-            if (!event.sender.isDestroyed()) {
-              event.sender.send(`shell:output:${result.processId}`, data);
+          this.sessionManager.addOutputListener(processId, listenerId, (data) => {
+            try {
+              if (!event.sender.isDestroyed()) {
+                event.sender.send(`shell:output:${processId}`, data);
+              }
+            } catch (error) {
+              // Frame was disposed between check and send - remove this listener
+              this.sessionManager.removeOutputListener(processId, listenerId);
             }
           }, true); // Skip replay for existing sessions
 
-          this.sessionManager.addExitListener(result.processId, listenerId, (exitCode) => {
-            if (!event.sender.isDestroyed()) {
-              event.sender.send(`shell:exit:${result.processId}`, exitCode);
+          this.sessionManager.addExitListener(processId, listenerId, (exitCode) => {
+            try {
+              if (!event.sender.isDestroyed()) {
+                event.sender.send(`shell:exit:${processId}`, exitCode);
+              }
+            } catch (error) {
+              // Frame was disposed between check and send - remove this listener
+              this.sessionManager.removeExitListener(processId, listenerId);
             }
           });
         }
