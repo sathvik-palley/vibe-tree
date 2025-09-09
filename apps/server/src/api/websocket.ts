@@ -13,6 +13,8 @@ import {
 interface Services {
   shellManager: ShellManager;
   authService: AuthService;
+  sessions?: Set<string>;
+  authRequired?: boolean;
 }
 
 interface WSMessage {
@@ -22,7 +24,7 @@ interface WSMessage {
 }
 
 export function setupWebSocketHandlers(wss: WebSocketServer, services: Services) {
-  const { shellManager, authService } = services;
+  const { shellManager, authService, sessions, authRequired } = services;
 
   wss.on('connection', (ws: WebSocket, req) => {
     console.log('🔌 New WebSocket connection from:', req.headers.origin || 'unknown');
@@ -71,23 +73,29 @@ export function setupWebSocketHandlers(wss: WebSocketServer, services: Services)
         return;
       }
     } else {
-      // No authentication provided
-      // In development, allow localhost by default and optionally allow LAN via env flag
-      const isLocalhost = req.headers.host?.includes('localhost') ||
-                          req.headers.host?.includes('127.0.0.1');
-      const allowLanDev = process.env.ALLOW_INSECURE_NETWORK === '1' ||
-                          process.env.ALLOW_INSECURE_LAN === '1' ||
-                          process.env.ALLOW_NETWORK_DEV === '1';
-
-      if (process.env.NODE_ENV !== 'production' && (isLocalhost || allowLanDev)) {
+      // Check for session token authentication
+      const sessionToken = url.searchParams.get('session_token');
+      
+      if (!authRequired) {
+        // Auth not required, allow connection
         authenticated = true;
-        deviceId = isLocalhost ? 'localhost-dev' : 'lan-dev';
+        deviceId = 'web-app';
         ws.send(JSON.stringify({
           type: 'auth:success',
           payload: { deviceId }
         }));
-        console.log(`🔓 Dev auth: allowing ${isLocalhost ? 'localhost' : 'LAN'} connection without token`);
+        console.log('🔓 Auth not required, allowing connection');
+      } else if (sessionToken && sessions?.has(sessionToken)) {
+        // Valid session token
+        authenticated = true;
+        deviceId = 'web-app-authenticated';
+        ws.send(JSON.stringify({
+          type: 'auth:success',
+          payload: { deviceId }
+        }));
+        console.log('🔐 Session token validated, allowing connection');
       } else {
+        // No valid authentication
         ws.send(JSON.stringify({
           type: 'auth:error',
           payload: { error: 'Authentication required' }

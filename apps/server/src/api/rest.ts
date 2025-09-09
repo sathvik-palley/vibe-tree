@@ -13,10 +13,11 @@ import {
 interface Services {
   shellManager: ShellManager;
   authService: AuthService;
+  requireAuth: (req: any, res: any, next: any) => void;
 }
 
 export function setupRestRoutes(app: Express, services: Services) {
-  const { shellManager, authService } = services;
+  const { shellManager, authService, requireAuth } = services;
   
   // Get server configuration
   app.get('/api/config', (req, res) => {
@@ -54,7 +55,7 @@ export function setupRestRoutes(app: Express, services: Services) {
   });
 
   // List active shell sessions
-  app.get('/api/shells', (req, res) => {
+  app.get('/api/shells', requireAuth, (req, res) => {
     const sessions = shellManager.getAllSessions();
     res.json(sessions.map(s => ({
       id: s.id,
@@ -65,7 +66,7 @@ export function setupRestRoutes(app: Express, services: Services) {
   });
 
   // Terminate a shell session
-  app.delete('/api/shells/:sessionId', (req, res) => {
+  app.delete('/api/shells/:sessionId', requireAuth, (req, res) => {
     const success = shellManager.terminateSession(req.params.sessionId);
     if (success) {
       res.json({ success: true });
@@ -75,7 +76,7 @@ export function setupRestRoutes(app: Express, services: Services) {
   });
 
   // Git operations (for non-WebSocket clients)
-  app.post('/api/git/worktrees', async (req, res) => {
+  app.post('/api/git/worktrees', requireAuth, async (req, res) => {
     try {
       const worktrees = await listWorktrees(req.body.projectPath);
       res.json(worktrees);
@@ -84,7 +85,7 @@ export function setupRestRoutes(app: Express, services: Services) {
     }
   });
 
-  app.post('/api/git/status', async (req, res) => {
+  app.post('/api/git/status', requireAuth, async (req, res) => {
     try {
       const status = await getGitStatus(req.body.worktreePath);
       res.json(status);
@@ -93,7 +94,7 @@ export function setupRestRoutes(app: Express, services: Services) {
     }
   });
 
-  app.post('/api/git/diff', async (req, res) => {
+  app.post('/api/git/diff', requireAuth, async (req, res) => {
     try {
       const diff = await getGitDiff(req.body.worktreePath, req.body.filePath);
       res.json({ diff });
@@ -102,7 +103,7 @@ export function setupRestRoutes(app: Express, services: Services) {
     }
   });
 
-  app.post('/api/git/worktree/add', async (req, res) => {
+  app.post('/api/git/worktree/add', requireAuth, async (req, res) => {
     try {
       const result = await addWorktree(req.body.projectPath, req.body.branchName);
       res.json(result);
@@ -111,7 +112,7 @@ export function setupRestRoutes(app: Express, services: Services) {
     }
   });
 
-  app.delete('/api/git/worktree', async (req, res) => {
+  app.delete('/api/git/worktree', requireAuth, async (req, res) => {
     try {
       const result = await removeWorktree(
         req.body.projectPath,
@@ -125,7 +126,7 @@ export function setupRestRoutes(app: Express, services: Services) {
   });
 
   // Validate multiple project paths
-  app.post('/api/projects/validate', async (req, res) => {
+  app.post('/api/projects/validate', requireAuth, async (req, res) => {
     try {
       const { projectPaths } = req.body;
       
@@ -149,7 +150,7 @@ export function setupRestRoutes(app: Express, services: Services) {
   });
 
   // Auto-load projects from environment variable
-  app.get('/api/projects/auto-load', async (req, res) => {
+  app.get('/api/projects/auto-load', requireAuth, async (req, res) => {
     try {
       const defaultProjectsEnv = process.env.DEFAULT_PROJECTS;
       

@@ -41,6 +41,9 @@ importers:
       '@radix-ui/react-toast':
         specifier: ^1.1.5
         version: 1.2.15(@types/react-dom@18.3.7)(@types/react@18.3.24)(react-dom@18.3.1)(react@18.3.1)
+      '@vibetree/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@vibetree/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -211,6 +214,9 @@ importers:
       '@git-diff-view/react':
         specifier: ^0.0.30
         version: 0.0.30(react-dom@18.3.1)(react@18.3.1)
+      '@vibetree/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@vibetree/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -281,6 +287,37 @@ importers:
       workbox-window:
         specifier: ^7.0.0
         version: 7.3.0
+
+  packages/auth:
+    dependencies:
+      clsx:
+        specifier: ^2.1.0
+        version: 2.1.1
+      lucide-react:
+        specifier: ^0.263.1
+        version: 0.263.1(react@18.3.1)
+      react:
+        specifier: ^18.2.0
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.2.0
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@types/node':
+        specifier: ^20.11.5
+        version: 20.19.11
+      '@types/react':
+        specifier: ^18.2.48
+        version: 18.3.24
+      '@types/react-dom':
+        specifier: ^18.2.18
+        version: 18.3.7(@types/react@18.3.24)
+      esbuild:
+        specifier: ^0.25.9
+        version: 0.25.9
+      typescript:
+        specifier: ^5.3.3
+        version: 5.9.2
 
   packages/core:
     devDependencies:
@@ -6540,6 +6577,14 @@ packages:
     resolution: {integrity: sha512-jumlc0BIUrS3qJGgIkWZsyfAM7NCWiBcCDhnd+3NNM5KbBmLTgHVfWBcg6W+rLUsIpzpERPsvwUP7CckAQSOoA==}
     engines: {node: '>=12'}
     dev: true
+
+  /lucide-react@0.263.1(react@18.3.1):
+    resolution: {integrity: sha512-keqxAx97PlaEN89PXZ6ki1N8nRjGWtDa4021GFYLNj0RgruM5odbpl8GHTExj0hhPq3sF6Up0gnxt6TSHu+ovw==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0
+    dependencies:
+      react: 18.3.1
+    dev: false
 
   /lucide-react@0.309.0(react@18.3.1):
     resolution: {integrity: sha512-zNVPczuwFrCfksZH3zbd1UDE6/WYhYAdbe2k7CImVyPAkXLgIwbs6eXQ4loigqDnUFjyFYCI5jZ1y10Kqal0dg==}

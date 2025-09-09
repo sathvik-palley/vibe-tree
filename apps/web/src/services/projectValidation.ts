@@ -22,6 +22,7 @@ export async function validateProjectPaths(projectPaths: string[]): Promise<Proj
   }
 
   try {
+    const { getAuthHeaders } = await import('@vibetree/auth');
     const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
     const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
     
@@ -29,6 +30,7 @@ export async function validateProjectPaths(projectPaths: string[]): Promise<Proj
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeaders(),
       },
       body: JSON.stringify({ projectPaths }),
     });
@@ -55,10 +57,13 @@ export async function validateProjectPaths(projectPaths: string[]): Promise<Proj
  */
 export async function autoLoadProjects(): Promise<AutoLoadResponse> {
   try {
+    const { getAuthHeaders } = await import('@vibetree/auth');
     const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
     const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
     
-    const response = await fetch(`${httpUrl}/api/projects/auto-load`);
+    const response = await fetch(`${httpUrl}/api/projects/auto-load`, {
+      headers: getAuthHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);

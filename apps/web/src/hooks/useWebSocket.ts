@@ -30,12 +30,12 @@ export function useWebSocket() {
 
     try {
       // Get WebSocket URL from environment or construct from current host
-      let wsUrl = import.meta.env.VITE_WS_URL;
+      let baseWsUrl = import.meta.env.VITE_WS_URL;
       
-      console.log('🔍 Environment VITE_WS_URL:', wsUrl);
+      console.log('🔍 Environment VITE_WS_URL:', baseWsUrl);
       console.log('🔍 Current window.location:', window.location);
       
-      if (!wsUrl) {
+      if (!baseWsUrl) {
         // If accessing from network (not localhost), use the same host but port 3002
         const isLocalhost = window.location.hostname === 'localhost' || 
                           window.location.hostname === '127.0.0.1';
@@ -43,13 +43,17 @@ export function useWebSocket() {
         console.log('🔍 Is localhost?', isLocalhost);
         
         if (isLocalhost) {
-          wsUrl = 'ws://localhost:3002';
+          baseWsUrl = 'ws://localhost:3002';
         } else {
           // Use the same host but different port for network access
           const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          wsUrl = `${protocol}//${window.location.hostname}:3002`;
+          baseWsUrl = `${protocol}//${window.location.hostname}:3002`;
         }
       }
+      
+      // Add session token to WebSocket URL if authenticated
+      const { getWebSocketUrl } = await import('@vibetree/auth');
+      const wsUrl = getWebSocketUrl(baseWsUrl);
       
       console.log('🔌 Attempting WebSocket connection to:', wsUrl);
       

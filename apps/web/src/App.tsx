@@ -5,14 +5,16 @@ import { GitDiffView } from './components/GitDiffView';
 import { ConnectionStatus } from './components/ConnectionStatus';
 import { ProjectSelector } from './components/ProjectSelector';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@vibetree/ui';
+import { AuthProvider, LoginPage, useAuth } from '@vibetree/auth';
 import { useAppStore } from './store';
 import { useWebSocket } from './hooks/useWebSocket';
 import { Sun, Moon, Plus, X, Terminal, GitBranch, CheckCircle } from 'lucide-react';
 import { autoLoadProjects } from './services/projectValidation';
 
-function App() {
+function AppContent() {
   const { projects, activeProjectId, addProject, addProjects, removeProject, setActiveProject, setSelectedTab, theme, setTheme, connected } = useAppStore();
   const { connect } = useWebSocket();
+  const { isAuthenticated } = useAuth();
   const [showProjectSelector, setShowProjectSelector] = useState(false);
   const [autoLoadAttempted, setAutoLoadAttempted] = useState(false);
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
@@ -21,13 +23,15 @@ function App() {
   // const activeProject = getActiveProject();
 
   useEffect(() => {
-    // Auto-connect on mount
-    connect();
-  }, []);
+    // Auto-connect only when authenticated
+    if (isAuthenticated) {
+      connect();
+    }
+  }, [isAuthenticated, connect]);
 
-  // Auto-load projects when connection is established
+  // Auto-load projects when authenticated AND connected
   useEffect(() => {
-    if (connected && !autoLoadAttempted && projects.length === 0) {
+    if (isAuthenticated && connected && !autoLoadAttempted && projects.length === 0) {
       const loadProjects = async () => {
         try {
           // Get auto-load configuration from backend
@@ -78,7 +82,7 @@ function App() {
       
       loadProjects();
     }
-  }, [connected, autoLoadAttempted, projects.length, addProjects, setActiveProject]);
+  }, [isAuthenticated, connected, autoLoadAttempted, projects.length, addProjects, setActiveProject]);
 
   useEffect(() => {
     // Initialize theme from localStorage or system preference
@@ -115,6 +119,11 @@ function App() {
     e.stopPropagation();
     removeProject(projectId);
   };
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   // Show project selector if no projects exist or explicitly requested
   if (projects.length === 0 || showProjectSelector) {
@@ -297,6 +306,14 @@ function App() {
         ))}
       </Tabs>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
