@@ -18,6 +18,49 @@ pnpm dev:debug
 
 This command is configured in `package.json` to start Electron with `--remote-debugging-port=9222`.
 
+## Layout Debugging Mode
+
+The application includes a special layout debugging mode that visualizes component boundaries with colored borders. This is useful for debugging layout issues, especially with terminal components.
+
+### Enabling Layout Debug Mode
+
+Run the application with layout debugging:
+
+```bash
+# From root directory
+pnpm dev:desktop:debug
+
+# Or from desktop directory
+cd apps/desktop
+pnpm dev:debug
+```
+
+This sets `DEBUG_LAYOUT=true` environment variable and loads additional debug CSS.
+
+### What You'll See
+
+When layout debug mode is active:
+- **Red indicator** appears in top-right corner: "⚠️ DEBUG LAYOUT MODE ACTIVE"
+- Each component gets a colored border with a label:
+  - **Pink border** - ProjectWorkspace (main container)
+  - **Brown border** - WorktreePanel (left sidebar)
+  - **Orange border** - RightPaneView (terminal/git tabs container)
+  - **Red border** - TerminalManager (manages terminal instances)
+  - **Blue border** - Terminal containers (individual terminal wrappers)
+  - **Green border** - Terminal header (title and controls)
+  - **Purple border** - XTerm instance (actual terminal)
+  - **Cyan border** - Terminal content area containing XTerm
+  - **Yellow dashed outline** - Active tab panels
+
+### Modifying Debug Styles
+
+The debug styles are in a separate CSS file:
+```
+apps/desktop/src/renderer/styles/debug-layout.css
+```
+
+You can modify this file to add more debug visualizations without changing any component code. The CSS uses attribute selectors and class combinations to target components.
+
 ## Starting the Application
 
 ```bash

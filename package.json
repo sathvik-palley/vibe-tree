@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "dev:desktop": "pnpm --filter @vibetree/core build && pnpm --filter @vibetree/desktop dev",
+    "dev:desktop:debug": "pnpm --filter @vibetree/core build && pnpm --filter @vibetree/desktop dev:debug",
     "dev:desktop:reset": "pnpm fix:electron && pnpm dev:desktop",
     "dev:server": "pnpm --filter @vibetree/server dev",
     "dev:web": "pnpm --filter @vibetree/web dev",

@@ -28,6 +28,15 @@ function AppContent() {
         setTheme(newTheme);
       }
     });
+
+    // Load debug CSS if DEBUG_LAYOUT environment variable is set
+    if (process.env.DEBUG_LAYOUT === 'true') {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = './styles/debug-layout.css';
+      document.head.appendChild(link);
+      console.log('🎨 Debug layout mode enabled - Component borders visible');
+    }
   }, []);
 
   useEffect(() => {

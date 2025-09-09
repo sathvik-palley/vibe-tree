@@ -43,4 +43,7 @@ export default defineConfig({
     port: Math.floor(Math.random() * 1000) + 3000,
     strictPort: false, // Allow Vite to find alternative ports if the random port is taken
   },
+  define: {
+    'process.env.DEBUG_LAYOUT': JSON.stringify(process.env.DEBUG_LAYOUT || 'false'),
+  },
 });
