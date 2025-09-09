@@ -13,6 +13,27 @@ class DesktopShellManager {
     this.setupIpcHandlers();
   }
 
+  /**
+   * Safely send IPC message to renderer, handling disposed frames
+   */
+  private safeSend(sender: Electron.WebContents, channel: string, ...args: any[]): boolean {
+    try {
+      // Double-check: first with isDestroyed, then catch any remaining errors
+      if (!sender || sender.isDestroyed()) {
+        return false;
+      }
+      
+      // Additional check for WebFrameMain disposal
+      // The frame might be disposed even if sender isn't destroyed
+      sender.send(channel, ...args);
+      return true;
+    } catch (error) {
+      // Silently handle disposal errors - this is expected behavior
+      // when frames are closed/navigated during async operations
+      return false;
+    }
+  }
+
   private setupIpcHandlers() {
     ipcMain.handle('shell:start', async (event, worktreePath: string, cols?: number, rows?: number, forceNew?: boolean, terminalId?: string) => {
       // Start session with node-pty spawn function
@@ -34,24 +55,16 @@ class DesktopShellManager {
         if (result.isNew) {
           // Add output listener
           this.sessionManager.addOutputListener(processId, listenerId, (data) => {
-            try {
-              if (!event.sender.isDestroyed()) {
-                event.sender.send(`shell:output:${processId}`, data);
-              }
-            } catch (error) {
-              // Frame was disposed between check and send - remove this listener
+            if (!this.safeSend(event.sender, `shell:output:${processId}`, data)) {
+              // Frame was disposed - remove this listener
               this.sessionManager.removeOutputListener(processId, listenerId);
             }
           });
 
           // Add exit listener
           this.sessionManager.addExitListener(processId, listenerId, (exitCode) => {
-            try {
-              if (!event.sender.isDestroyed()) {
-                event.sender.send(`shell:exit:${processId}`, exitCode);
-              }
-            } catch (error) {
-              // Frame was disposed between check and send - remove this listener
+            if (!this.safeSend(event.sender, `shell:exit:${processId}`, exitCode)) {
+              // Frame was disposed - remove this listener
               this.sessionManager.removeExitListener(processId, listenerId);
             }
           });
@@ -63,23 +76,15 @@ class DesktopShellManager {
           
           // Re-add with current sender, but skip buffer replay for existing sessions
           this.sessionManager.addOutputListener(processId, listenerId, (data) => {
-            try {
-              if (!event.sender.isDestroyed()) {
-                event.sender.send(`shell:output:${processId}`, data);
-              }
-            } catch (error) {
-              // Frame was disposed between check and send - remove this listener
+            if (!this.safeSend(event.sender, `shell:output:${processId}`, data)) {
+              // Frame was disposed - remove this listener
               this.sessionManager.removeOutputListener(processId, listenerId);
             }
           }, true); // Skip replay for existing sessions
 
           this.sessionManager.addExitListener(processId, listenerId, (exitCode) => {
-            try {
-              if (!event.sender.isDestroyed()) {
-                event.sender.send(`shell:exit:${processId}`, exitCode);
-              }
-            } catch (error) {
-              // Frame was disposed between check and send - remove this listener
+            if (!this.safeSend(event.sender, `shell:exit:${processId}`, exitCode)) {
+              // Frame was disposed - remove this listener
               this.sessionManager.removeExitListener(processId, listenerId);
             }
           });
