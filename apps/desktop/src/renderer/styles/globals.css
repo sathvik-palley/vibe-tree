@@ -58,3 +58,9 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   }
 }
+
+/* Fix for OutPortal generated div - only apply flex when parent is visible */
+.terminal-outportal-wrapper[style*="display: block"] > div {
+  display: flex;
+  height: 100%;
+}

@@ -14,12 +14,15 @@ interface ClaudeTerminalProps {
   worktreePath: string;
   projectId?: string;
   theme?: 'light' | 'dark';
+  isVisible?: boolean;
 }
 
 // Cache for terminal states per worktree
 const terminalStateCache = new Map<string, string>();
 
-export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalProps) {
+export function ClaudeTerminal({ worktreePath, theme = 'dark', isVisible = true }: ClaudeTerminalProps) {
+  // Log when component renders to verify it only happens once per terminal
+  console.log(`[ClaudeTerminal] Rendering terminal for: ${worktreePath}`);
   const terminalRef = useRef<HTMLDivElement>(null);
   const [terminal, setTerminal] = useState<Terminal | null>(null);
   const processIdRef = useRef<string>('');
@@ -32,7 +35,7 @@ export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalP
   useEffect(() => {
     if (!terminalRef.current) return;
 
-    console.log('Initializing terminal...');
+    console.log(`[ClaudeTerminal] Initializing terminal for: ${worktreePath}`);
 
     // Create terminal instance with theme-aware colors
     const getTerminalTheme = (currentTheme: 'light' | 'dark') => {
@@ -188,6 +191,7 @@ export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalP
     window.addEventListener('resize', handleResize);
 
     return () => {
+      console.log(`[ClaudeTerminal] Cleanup for: ${worktreePath}`);
       window.removeEventListener('resize', handleResize);
       // Clean up listeners
       removeListenersRef.current.forEach(remove => remove());
@@ -195,7 +199,7 @@ export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalP
       bellDisposable.dispose();
       term.dispose();
     };
-  }, [theme]);
+  }, []); // Empty dependency array - terminal only initializes once
 
   // Save terminal state before unmounting or changing worktree
   useEffect(() => {
@@ -393,6 +397,32 @@ export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalP
     terminal.options.theme = getTerminalTheme(theme);
   }, [terminal, theme]);
 
+  // Handle visibility changes - focus terminal when it becomes visible
+  useEffect(() => {
+    if (!terminal || !isVisible) return;
+
+    console.log(`[ClaudeTerminal] Terminal visibility changed for ${worktreePath}: ${isVisible}`);
+    
+    // Focus the terminal when it becomes visible
+    // Use a small timeout to ensure the DOM is ready
+    const focusTimeout = setTimeout(() => {
+      terminal.focus();
+      
+      // Also trigger a resize to ensure proper rendering
+      if (fitAddonRef.current && terminalRef.current) {
+        try {
+          if (terminalRef.current.offsetWidth > 0 && terminalRef.current.offsetHeight > 0) {
+            fitAddonRef.current.fit();
+          }
+        } catch (err) {
+          console.error('Error fitting terminal on visibility change:', err);
+        }
+      }
+    }, 50);
+
+    return () => clearTimeout(focusTimeout);
+  }, [terminal, isVisible]);
+
   const handleOpenInIDE = async (ideName: string) => {
     try {
       const result = await window.electronAPI.ide.open(ideName, worktreePath);
@@ -416,9 +446,9 @@ export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalP
 
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="claude-terminal-root flex-1 flex flex-col h-full">
       {/* Header */}
-      <div className="h-[57px] px-4 border-b flex items-center justify-between flex-shrink-0">
+      <div className="terminal-header h-[57px] px-4 border-b flex items-center justify-between flex-shrink-0">
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold">Terminal</h3>
           <p className="text-xs text-muted-foreground truncate">{worktreePath}</p>
@@ -460,7 +490,7 @@ export function ClaudeTerminal({ worktreePath, theme = 'dark' }: ClaudeTerminalP
       {/* Terminal container */}
       <div 
         ref={terminalRef} 
-        className={`flex-1 h-full ${theme === 'light' ? 'bg-white' : 'bg-black'}`}
+        className={`terminal-xterm-container flex-1 h-full ${theme === 'light' ? 'bg-white' : 'bg-black'}`}
         style={{ minHeight: '100px' }}
       />
     </div>
