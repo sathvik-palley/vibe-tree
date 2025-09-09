@@ -241,6 +241,15 @@ ipcMain.handle('dialog:select-directory', async () => {
   return result.filePaths[0];
 });
 
+// Programmatic project opening (for testing)
+ipcMain.handle('project:open-path', async (_, projectPath: string) => {
+  if (mainWindow && fs.existsSync(projectPath)) {
+    mainWindow.webContents.send('project:open', projectPath);
+    return { success: true };
+  }
+  return { success: false, error: 'Invalid path or window not ready' };
+});
+
 // Open external links
 ipcMain.handle('shell:open-external', async (_, url: string) => {
   await shell.openExternal(url);
