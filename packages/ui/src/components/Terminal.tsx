@@ -153,13 +153,12 @@ export const Terminal: React.FC<TerminalProps> = ({
       lineHeight: 1.2,
       cursorBlink,
       allowTransparency: false,
-      convertEol,
+      convertEol, // Required for proper line ending handling
       scrollback,
       tabStopWidth,
       windowsMode: false,
       allowProposedApi: true,
       macOptionIsMeta: true,
-      convertEol, // Required for proper line ending handling
       fastScrollModifier: 'shift' as const
     };
 
