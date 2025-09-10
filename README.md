@@ -60,6 +60,16 @@ Download the latest release for your platform from the [Releases page](https://g
    - Scan the QR code shown in terminal
    - Or navigate to the network URL (e.g., http://192.168.1.x:3000)
 
+### 🐳 Docker Deployment
+
+Deploy VibeTree on any VM or cloud instance with one command:
+
+```bash
+npm run deploy
+```
+
+This automatically builds and runs VibeTree in a Docker container. Perfect for deployment on EC2, Digital Ocean, or any Docker-enabled environment. See [DOCKER.md](DOCKER.md) for detailed instructions.
+
 **Safari/iOS Requirements:**
 - Both services must be running (web on :3000, server on :3002)
 - Allow firewall connections on both ports if prompted
