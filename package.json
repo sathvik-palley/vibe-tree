@@ -5,7 +5,9 @@
   "description": "VibeTree - Vibe code with AI in parallel git worktrees",
   "scripts": {
     "dev": "turbo run dev",
-    "dev:desktop": "pnpm --filter @vibetree/desktop dev",
+    "dev:desktop": "pnpm --filter @vibetree/core build && pnpm --filter @vibetree/desktop dev",
+    "dev:desktop:debug": "pnpm --filter @vibetree/core build && pnpm --filter @vibetree/desktop dev:debug",
+    "dev:desktop:reset": "pnpm fix:electron && pnpm dev:desktop",
     "dev:server": "pnpm --filter @vibetree/server dev",
     "dev:web": "pnpm --filter @vibetree/web dev",
     "dev:all": "pnpm build:deps && concurrently \"pnpm dev:server\" \"pnpm dev:web\"",
@@ -16,8 +18,11 @@
     "build:web": "pnpm build:deps && pnpm --filter @vibetree/web build",
     "typecheck": "turbo run typecheck",
     "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:run": "turbo run test:run",
     "clean": "turbo run clean",
-    "package:desktop": "pnpm --filter @vibetree/desktop package"
+    "package:desktop": "pnpm --filter @vibetree/desktop package",
+    "fix:electron": "./fix-electron.sh"
   },
   "keywords": [
     "electron",

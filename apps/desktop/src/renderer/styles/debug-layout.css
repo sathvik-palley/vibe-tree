@@ -1,0 +1,171 @@
+/* Debug styles for terminal layout visualization */
+/* This file is only loaded when running with DEBUG_LAYOUT=true */
+
+/* ProjectWorkspace - main container with tabs content */
+[role="tabpanel"] > div.flex-1.flex.h-full {
+  border: 3px solid pink !important;
+  background-color: rgba(255, 192, 203, 0.1) !important;
+  position: relative;
+}
+
+[role="tabpanel"] > div.flex-1.flex.h-full::before {
+  content: 'ProjectWorkspace';
+  position: absolute;
+  top: 40px;
+  left: 0;
+  background: deeppink;
+  color: white;
+  padding: 2px 8px;
+  font-size: 12px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* WorktreePanel - left sidebar */
+[role="tabpanel"] > div > div.w-80.border-r {
+  border: 3px solid brown !important;
+  background-color: rgba(165, 42, 42, 0.05) !important;
+  position: relative;
+}
+
+[role="tabpanel"] > div > div.w-80.border-r::before {
+  content: 'WorktreePanel';
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: brown;
+  color: white;
+  padding: 2px 8px;
+  font-size: 12px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* RightPaneView - contains terminal/git tabs */
+[role="tabpanel"] > div > div:last-child.flex-1.flex.flex-col {
+  border: 3px solid orange !important;
+  background-color: rgba(255, 165, 0, 0.05) !important;
+  position: relative;
+}
+
+[role="tabpanel"] > div > div:last-child.flex-1.flex.flex-col::before {
+  content: 'RightPaneView';
+  position: absolute;
+  top: 0;
+  right: 100px;
+  background: orange;
+  color: white;
+  padding: 2px 8px;
+  font-size: 12px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* TerminalManager - container for terminal instances */
+[role="tabpanel"] div.relative.flex-1.h-full:has(> div.absolute.inset-0) {
+  border: 3px solid red !important;
+  background-color: rgba(255, 0, 0, 0.05) !important;
+  position: relative;
+}
+
+[role="tabpanel"] div.relative.flex-1.h-full:has(> div.absolute.inset-0)::before {
+  content: 'TerminalManager';
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: red;
+  color: white;
+  padding: 2px 8px;
+  font-size: 12px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Terminal Container - individual terminal wrapper */
+div.absolute.inset-0.w-full.h-full {
+  border: 3px solid blue !important;
+  background-color: rgba(0, 0, 255, 0.05) !important;
+  position: relative;
+}
+
+div.absolute.inset-0.w-full.h-full::before {
+  content: 'Terminal Container';
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: blue;
+  color: white;
+  padding: 2px 8px;
+  font-size: 12px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Terminal Header - the header with title and buttons */
+div.h-\[57px\].px-4.border-b.flex.items-center.justify-between {
+  border: 2px solid green !important;
+  background-color: rgba(0, 255, 0, 0.1) !important;
+  position: relative;
+}
+
+div.h-\[57px\].px-4.border-b.flex.items-center.justify-between::before {
+  content: 'Terminal Header';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: green;
+  color: white;
+  padding: 2px 8px;
+  font-size: 12px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* XTerm terminal instance - the actual terminal div */
+.xterm {
+  border: 3px solid purple !important;
+  background-color: rgba(128, 0, 128, 0.05) !important;
+  position: relative;
+}
+
+.xterm::before {
+  content: 'XTerm Instance';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: purple;
+  color: white;
+  padding: 2px 8px;
+  font-size: 12px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Terminal content area where xterm renders */
+div.flex-1.h-full:has(.xterm) {
+  border: 3px solid cyan !important;
+  background-color: rgba(0, 255, 255, 0.05) !important;
+}
+
+/* Tab content areas */
+[role="tabpanel"][data-state="active"] {
+  outline: 2px dashed yellow !important;
+  outline-offset: -2px;
+}
+
+/* Additional debug info in console */
+body::before {
+  content: '⚠️ DEBUG LAYOUT MODE ACTIVE';
+  position: fixed;
+  top: 5px;
+  right: 5px;
+  background: red;
+  color: white;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 10000;
+  pointer-events: none;
+  border-radius: 3px;
+}

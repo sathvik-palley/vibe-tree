@@ -17,6 +17,8 @@ release/
 # Misc
 .DS_Store
 *.pem
+.dev-port
+.web-port
 
 # Debug
 npm-debug.log*
@@ -25,6 +27,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 *.log
+
+# Package manager locks (using pnpm)
+package-lock.json
+yarn.lock
 
 # Local env files
 .env
@@ -52,3 +58,7 @@ packages/web/*.local
 # Server
 packages/server/dist/
 packages/server/.env
+
+**/playwright-report/**
+**/test-results/**
+
