@@ -1,3 +1,5 @@
+import { getServerHttpUrl } from './portDiscovery';
+
 interface ProjectValidationResult {
   path: string;
   name?: string;
@@ -22,8 +24,7 @@ export async function validateProjectPaths(projectPaths: string[]): Promise<Proj
   }
 
   try {
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
-    const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
+    const httpUrl = await getServerHttpUrl();
     
     const response = await fetch(`${httpUrl}/api/projects/validate`, {
       method: 'POST',
@@ -55,8 +56,7 @@ export async function validateProjectPaths(projectPaths: string[]): Promise<Proj
  */
 export async function autoLoadProjects(): Promise<AutoLoadResponse> {
   try {
-    const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
-    const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
+    const httpUrl = await getServerHttpUrl();
     
     const response = await fetch(`${httpUrl}/api/projects/auto-load`);
 

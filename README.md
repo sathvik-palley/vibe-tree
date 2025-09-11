@@ -39,7 +39,7 @@ pnpm install
 pnpm dev:all
 
 # Or run services separately:
-pnpm dev:server  # Socket server on :3002
+pnpm dev:server  # Socket server on random 3XXX port
 pnpm dev:web     # Web app on :3000
 pnpm dev:desktop # Desktop app
 ```
@@ -71,22 +71,22 @@ npm run deploy
 This automatically builds and runs VibeTree in a Docker container. Perfect for deployment on EC2, Digital Ocean, or any Docker-enabled environment. See [DOCKER.md](DOCKER.md) for detailed instructions.
 
 **Safari/iOS Requirements:**
-- Both services must be running (web on :3000, server on :3002)
+- Both services must be running (web on random 3XXX port, server on random 3XXX port)
 - Allow firewall connections on both ports if prompted
 
 #### LAN Dev Mode (no pairing)
-When opening from a phone on your Wi‑Fi, the web UI loads over LAN and the web app connects to the socket server via WebSocket on :3002. In development, enable LAN WebSocket access without pairing:
+When opening from a phone on your Wi‑Fi, the web UI loads over LAN and the web app automatically discovers and connects to the socket server via WebSocket. In development, enable LAN WebSocket access without pairing:
 
 ```bash
 # Allow LAN connections to the WebSocket server in dev (no auth)
-ALLOW_INSECURE_NETWORK=1 HOST=0.0.0.0 PORT=3002 pnpm dev:server
+ALLOW_INSECURE_NETWORK=1 HOST=0.0.0.0 pnpm dev:server
 pnpm dev:web
 ```
 
 Then open the printed Network URL (e.g., http://192.168.1.x:3000) on your phone. If you still see "Not connected", you can explicitly point the web app at the socket server by creating `apps/web/.env`:
 
 ```ini
-VITE_WS_URL=ws://192.168.1.x:3002
+VITE_WS_URL=ws://192.168.1.x:XXXX  # Replace XXXX with actual server port
 ```
 
 ### Environment Variables
@@ -95,11 +95,11 @@ Create `.env` files as needed:
 
 ```bash
 # apps/web/.env (optional)
-VITE_WS_URL=ws://192.168.1.100:3002     # For custom socket server
+VITE_WS_URL=ws://192.168.1.100:XXXX     # For custom socket server (replace XXXX with actual port)
 VITE_PROJECT_PATH=/path/to/project       # Override project path
 
 # apps/server/.env (optional)
-PORT=3002                              # Socket server port
+PORT=3002                              # Socket server port (optional, uses random port by default)
 HOST=0.0.0.0                          # Bind to all interfaces
 PROJECT_PATH=/path/to/project          # Default project path
 # In dev, allow unauthenticated LAN WebSocket connections (use only on trusted networks)

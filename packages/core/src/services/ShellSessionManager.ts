@@ -23,6 +23,9 @@ interface ShellSession {
   lastActivity: Date;
   listeners: Map<string, (data: string) => void>;
   exitListeners: Map<string, (code: number) => void>;
+  dataDisposable?: { dispose: () => void }; // Store the PTY data listener disposable
+  outputBuffer: string[]; // Buffer to store terminal output for replay
+  maxBufferSize: number; // Maximum buffer size in characters
 }
 
 /**
@@ -36,8 +39,8 @@ export class ShellSessionManager {
   private cleanupInterval: NodeJS.Timeout | null = null;
 
   private constructor() {
-    // Start cleanup timer
-    this.cleanupInterval = setInterval(() => this.cleanupInactiveSessions(), 60000);
+    // Cleanup timer disabled - keep sessions alive for Claude feedback
+    // this.cleanupInterval = setInterval(() => this.cleanupInactiveSessions(), 60000);
   }
 
   /**
@@ -51,12 +54,18 @@ export class ShellSessionManager {
   }
 
   /**
-   * Generate deterministic session ID from worktree path
-   * This ensures same session is reused for same worktree
+   * Generate deterministic session ID from worktree path and terminal ID
+   * This ensures same session is reused for same terminal in same worktree
    */
-  private generateSessionId(worktreePath: string): string {
+  private generateSessionId(worktreePath: string, terminalId?: string, forceNew: boolean = false): string {
+    if (forceNew) {
+      // Generate a unique ID for independent sessions
+      return crypto.randomBytes(8).toString('hex');
+    }
+    // Include terminal ID in the hash to ensure each terminal has its own session
+    const key = terminalId ? `${worktreePath}:${terminalId}` : worktreePath;
     return crypto.createHash('sha256')
-      .update(worktreePath)
+      .update(key)
       .digest('hex')
       .substring(0, 16);
   }
@@ -68,19 +77,23 @@ export class ShellSessionManager {
     worktreePath: string, 
     cols = 80, 
     rows = 30,
-    spawnFunction?: (shell: string, args: string[], options: any) => IPty
+    spawnFunction?: (shell: string, args: string[], options: any) => IPty,
+    forceNew: boolean = false,
+    terminalId?: string
   ): Promise<ShellStartResult> {
-    const sessionId = this.generateSessionId(worktreePath);
+    const sessionId = this.generateSessionId(worktreePath, terminalId, forceNew);
     
-    // Return existing session if available
-    const existingSession = this.sessions.get(sessionId);
-    if (existingSession) {
-      existingSession.lastActivity = new Date();
-      return {
-        success: true,
-        processId: sessionId,
-        isNew: false
-      };
+    // Return existing session if available (unless forceNew is true)
+    if (!forceNew) {
+      const existingSession = this.sessions.get(sessionId);
+      if (existingSession) {
+        existingSession.lastActivity = new Date();
+        return {
+          success: true,
+          processId: sessionId,
+          isNew: false
+        };
+      }
     }
 
     // Create new session
@@ -100,7 +113,9 @@ export class ShellSessionManager {
         createdAt: new Date(),
         lastActivity: new Date(),
         listeners: new Map(),
-        exitListeners: new Map()
+        exitListeners: new Map(),
+        outputBuffer: [],
+        maxBufferSize: 100000 // Approximately 100KB of text
       };
 
       // Handle PTY exit
@@ -173,7 +188,7 @@ export class ShellSessionManager {
   /**
    * Add output listener for session
    */
-  addOutputListener(sessionId: string, listenerId: string, callback: (data: string) => void): boolean {
+  addOutputListener(sessionId: string, listenerId: string, callback: (data: string) => void, skipReplay: boolean = false): boolean {
     const session = this.sessions.get(sessionId);
     if (!session) return false;
 
@@ -185,13 +200,48 @@ export class ShellSessionManager {
     
     // Subscribe to PTY data if this is the first listener
     if (session.listeners.size === 1) {
-      onPtyData(session.pty, (data) => {
+      // Dispose of any existing data listener first (shouldn't happen but be safe)
+      if (session.dataDisposable) {
+        session.dataDisposable.dispose();
+      }
+      
+      session.dataDisposable = onPtyData(session.pty, (data) => {
+        // Store in buffer for replay
+        this.addToBuffer(session, data);
+        
+        // Send to all listeners
         session.listeners.forEach(listener => listener(data));
       });
     }
 
+    // Replay buffer for new listener (unless skipReplay is true)
+    if (!skipReplay && session.outputBuffer.length > 0) {
+      // Combine all buffer chunks and send as one to avoid flicker
+      const replayData = session.outputBuffer.join('');
+      if (replayData) {
+        // Use setTimeout to ensure the terminal is ready
+        setTimeout(() => callback(replayData), 50);
+      }
+    }
+
     session.lastActivity = new Date();
     return true;
+  }
+
+  /**
+   * Add data to session buffer, maintaining size limit
+   */
+  private addToBuffer(session: ShellSession, data: string): void {
+    session.outputBuffer.push(data);
+    
+    // Trim buffer if it exceeds max size
+    let totalSize = session.outputBuffer.reduce((sum, chunk) => sum + chunk.length, 0);
+    while (totalSize > session.maxBufferSize && session.outputBuffer.length > 1) {
+      const removed = session.outputBuffer.shift();
+      if (removed) {
+        totalSize -= removed.length;
+      }
+    }
   }
 
   /**
@@ -201,7 +251,15 @@ export class ShellSessionManager {
     const session = this.sessions.get(sessionId);
     if (!session) return false;
 
-    return session.listeners.delete(listenerId);
+    const removed = session.listeners.delete(listenerId);
+    
+    // If this was the last listener, dispose of the PTY data listener
+    if (removed && session.listeners.size === 0 && session.dataDisposable) {
+      session.dataDisposable.dispose();
+      session.dataDisposable = undefined;
+    }
+    
+    return removed;
   }
 
   /**
@@ -258,6 +316,11 @@ export class ShellSessionManager {
     if (!session) return false;
 
     try {
+      // Dispose of data listener if it exists
+      if (session.dataDisposable) {
+        session.dataDisposable.dispose();
+      }
+      
       // Clear listeners
       session.listeners.clear();
       session.exitListeners.clear();

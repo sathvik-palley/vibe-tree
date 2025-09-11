@@ -1,9 +1,33 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import fs from 'fs';
+
+// Plugin to capture the actual port Vite uses
+function portCapturePlugin() {
+  return {
+    name: 'port-capture',
+    configureServer(server: any) {
+      server.middlewares.use('/__vite_port_capture', (req: any, res: any, next: any) => {
+        // This won't be called, but ensures the plugin is active
+        next();
+      });
+
+      // Hook into the server listening event
+      server.httpServer?.on('listening', () => {
+        const address = server.httpServer.address();
+        if (address && typeof address === 'object') {
+          const actualPort = address.port;
+          fs.writeFileSync('.dev-port', actualPort.toString());
+          console.log(`✓ Dev server started on port ${actualPort}, saved to .dev-port`);
+        }
+      });
+    }
+  };
+}
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), portCapturePlugin()],
   root: 'src/renderer',
   base: './',
   build: {
@@ -16,6 +40,10 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: Math.floor(Math.random() * 1000) + 3000,
+    strictPort: false, // Allow Vite to find alternative ports if the random port is taken
+  },
+  define: {
+    'process.env.DEBUG_LAYOUT': JSON.stringify(process.env.DEBUG_LAYOUT || 'false'),
   },
 });

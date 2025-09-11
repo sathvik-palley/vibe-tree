@@ -7,12 +7,12 @@ The web interface for VibeTree that connects to the socket server for terminal a
 ### Development
 
 ```bash
-# Start both web app (port 3000) and socket server (port 3002)
+# Start both web app and socket server (both use random 3XXX ports)
 pnpm dev:all
 
 # Or start them separately:
-pnpm dev:server  # Socket server on :3002
-pnpm dev:web     # Web app on :3000
+pnpm dev:server  # Socket server on random 3XXX port
+pnpm dev:web     # Web app on random 3XXX port
 ```
 
 ### Network/Mobile Access
@@ -23,25 +23,25 @@ pnpm dev:web     # Web app on :3000
    ```
 
 2. The server will display:
-   - Web App URL (port 3000) - Access the UI here
-   - Socket Server URL (port 3002) - API/WebSocket endpoint
+   - Web App URL - Access the UI here
+   - Socket Server URL - API/WebSocket endpoint
    - QR code pointing to the Web App
 
 3. For mobile access on the same network:
    - Scan the QR code, OR
    - Navigate to the Network URL shown (e.g., `http://192.168.1.100:3000`)
-   - The web app will attempt `ws://<same-host>:3002` for WebSocket
+   - The web app will automatically discover and connect to the WebSocket server
 
 4. **Important for Safari/iOS**:
    - The web app tries to connect to the socket server on the same IP
-   - Both services must be running (web on :3000, server on :3002)
-   - If you have firewall enabled, allow connections on ports 3000 and 3002
+   - Both services must be running on their respective random ports
+   - If you have firewall enabled, allow connections on the ports shown in the console output
 
 If you see "Not connected" on mobile:
 - Start the server allowing LAN dev connections (no pairing/auth):
-  `ALLOW_INSECURE_NETWORK=1 HOST=0.0.0.0 PORT=3002 pnpm dev:server`
+  `ALLOW_INSECURE_NETWORK=1 HOST=0.0.0.0 pnpm dev:server`
 - Optionally set an explicit socket URL in `apps/web/.env`:
-  `VITE_WS_URL=ws://192.168.1.100:3002`
+  `VITE_WS_URL=ws://192.168.1.100:XXXX` (replace XXXX with actual server port)
 
 ### Configuration
 
@@ -49,7 +49,7 @@ Create a `.env` file (see `.env.example`):
 
 ```env
 # For network access, set your machine's IP
-VITE_WS_URL=ws://192.168.1.100:3002
+VITE_WS_URL=ws://192.168.1.100:XXXX  # Replace XXXX with actual server port
 
 # Optional: Set project path
 VITE_PROJECT_PATH=/path/to/your/project
@@ -57,8 +57,8 @@ VITE_PROJECT_PATH=/path/to/your/project
 
 ### Architecture
 
-- **Web App (Port 3000)**: React-based UI with Vite dev server
-- **Socket Server (Port 3002)**: Express server providing WebSocket and REST APIs
+- **Web App**: React-based UI with Vite dev server on random 3XXX port
+- **Socket Server**: Express server providing WebSocket and REST APIs on random 3XXX port
 - The web app connects to the socket server for all backend operations
 - No build/bundling needed for development - both run independently
 
