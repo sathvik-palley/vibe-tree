@@ -16,8 +16,8 @@ const api = {
       ipcRenderer.invoke('git:diff-staged', worktreePath, filePath),
   },
   shell: {
-    start: (worktreePath: string, cols?: number, rows?: number) => 
-      ipcRenderer.invoke('shell:start', worktreePath, cols, rows),
+    start: (worktreePath: string, cols?: number, rows?: number, forceNew?: boolean, terminalId?: string) => 
+      ipcRenderer.invoke('shell:start', worktreePath, cols, rows, forceNew, terminalId),
     write: (processId: string, data: string) => 
       ipcRenderer.invoke('shell:write', processId, data),
     resize: (processId: string, cols: number, rows: number) => 
@@ -28,6 +28,8 @@ const api = {
       ipcRenderer.invoke('shell:get-buffer', processId),
     openExternal: (url: string) =>
       ipcRenderer.invoke('shell:open-external', url),
+    terminate: (processId: string) =>
+      ipcRenderer.invoke('shell:terminate', processId),
     onOutput: (processId: string, callback: (data: string) => void) => {
       const channel = `shell:output:${processId}`;
       const listener = (_: unknown, data: string) => callback(data);
@@ -54,6 +56,26 @@ const api = {
   },
   dialog: {
     selectDirectory: () => ipcRenderer.invoke('dialog:select-directory')
+  },
+  project: {
+    openPath: (projectPath: string) => ipcRenderer.invoke('project:open-path', projectPath),
+    openCwd: () => ipcRenderer.invoke('project:open-cwd')
+  },
+  recentProjects: {
+    get: () => ipcRenderer.invoke('recent-projects:get'),
+    add: (projectPath: string) => ipcRenderer.invoke('recent-projects:add', projectPath),
+    remove: (projectPath: string) => ipcRenderer.invoke('recent-projects:remove', projectPath),
+    clear: () => ipcRenderer.invoke('recent-projects:clear'),
+    onOpenProject: (callback: (path: string) => void) => {
+      const listener = (_: unknown, path: string) => callback(path);
+      ipcRenderer.on('project:open', listener);
+      return () => ipcRenderer.removeListener('project:open', listener);
+    },
+    onOpenRecentProject: (callback: (path: string) => void) => {
+      const listener = (_: unknown, path: string) => callback(path);
+      ipcRenderer.on('project:open-recent', listener);
+      return () => ipcRenderer.removeListener('project:open-recent', listener);
+    },
   }
 };
 

@@ -1,3 +1,5 @@
+import { getServerHttpUrl } from './portDiscovery';
+
 interface ProjectValidationResult {
   path: string;
   name?: string;
@@ -24,7 +26,7 @@ export async function validateProjectPaths(projectPaths: string[]): Promise<Proj
   try {
     const { getAuthHeaders } = await import('@vibetree/auth');
     const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
-    const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
+    const httpUrl = await getServerHttpUrl();
     
     const response = await fetch(`${httpUrl}/api/projects/validate`, {
       method: 'POST',
@@ -59,7 +61,7 @@ export async function autoLoadProjects(): Promise<AutoLoadResponse> {
   try {
     const { getAuthHeaders } = await import('@vibetree/auth');
     const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:3002';
-    const httpUrl = wsUrl.replace('ws://', 'http://').replace('wss://', 'https://');
+    const httpUrl = await getServerHttpUrl();
     
     const response = await fetch(`${httpUrl}/api/projects/auto-load`, {
       headers: getAuthHeaders(),

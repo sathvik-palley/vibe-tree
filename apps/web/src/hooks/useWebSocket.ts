@@ -8,6 +8,7 @@ import {
   onGlobalAdapterConnected,
   onGlobalAdapterDisconnected
 } from '../adapters/globalWebSocketAdapter';
+import { getServerWebSocketUrl } from '../services/portDiscovery';
 
 export function useWebSocket() {
   const { 
@@ -50,10 +51,12 @@ export function useWebSocket() {
           baseWsUrl = `${protocol}//${window.location.hostname}:3002`;
         }
       }
+
+      // Get WebSocket URL using dynamic port discovery
+      const wsUrl = await getServerWebSocketUrl();
       
       // Add session token to WebSocket URL if authenticated
       const { getWebSocketUrl } = await import('@vibetree/auth');
-      const wsUrl = getWebSocketUrl(baseWsUrl);
       
       console.log('🔌 Attempting WebSocket connection to:', wsUrl);
       
