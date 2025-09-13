@@ -71,6 +71,38 @@ async function startServer() {
   // In-memory session store (in production, use Redis or database)
   const sessions = new Set<string>();
 
+  // Initialize services first
+  const shellManager = new ShellManager();
+  const authService = new AuthService();
+
+  // Create WebSocket server
+  const wss = new WebSocketServer({ server });
+
+  // Generate session token
+  function generateSessionToken(): string {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  }
+
+  // Authentication middleware
+  function requireAuth(req: any, res: any, next: any) {
+    // Skip auth if not required
+    if (!AUTH_REQUIRED) {
+      return next();
+    }
+
+    const token = req.headers.authorization?.replace('Bearer ', '') || req.query.token;
+    
+    if (!token || !sessions.has(token)) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required' 
+      });
+    }
+    
+    req.sessionToken = token;
+    next();
+  }
+
   // Configuration endpoint for web app
   app.get('/api/config', (req, res) => {
     res.json({
@@ -80,106 +112,67 @@ async function startServer() {
     });
   });
 
+  // Authentication endpoint
+  app.post('/api/auth/login', (req, res) => {
+    const { username, password } = req.body;
+
+    // Check if auth is required
+    if (!AUTH_REQUIRED) {
+      return res.json({ 
+        success: true, 
+        message: 'Authentication not required',
+        token: 'no-auth-required'
+      });
+    }
+
+    // Validate credentials are configured
+    if (!AUTH_USERNAME || !AUTH_PASSWORD) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Server authentication not properly configured' 
+      });
+    }
+
+    // Validate input
+    if (!username || !password) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Username and password are required' 
+      });
+    }
+
+    // Check credentials
+    if (username === AUTH_USERNAME && password === AUTH_PASSWORD) {
+      const token = generateSessionToken();
+      sessions.add(token);
+      
+      res.json({ 
+        success: true, 
+        message: 'Authentication successful',
+        token 
+      });
+    } else {
+      res.status(401).json({ 
+        success: false, 
+        message: 'Invalid username or password' 
+      });
+    }
+  });
+
+  // Logout endpoint
+  app.post('/api/auth/logout', (req, res) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    if (token) {
+      sessions.delete(token);
+    }
+    res.json({ success: true, message: 'Logged out successfully' });
+  });
+
   // Setup REST routes
   setupRestRoutes(app, { shellManager, authService, requireAuth });
 
   // Setup WebSocket handlers
   setupWebSocketHandlers(wss, { shellManager, authService, sessions, authRequired: AUTH_REQUIRED });
-
-  // Generate session token
-  function generateSessionToken(): string {
-    return Math.random().toString(36).substring(2) + Date.now().toString(36);
-  }
-
-// Authentication middleware
-function requireAuth(req: any, res: any, next: any) {
-  // Skip auth if not required
-  if (!AUTH_REQUIRED) {
-    return next();
-  }
-
-  const token = req.headers.authorization?.replace('Bearer ', '') || req.query.token;
-  
-  if (!token || !sessions.has(token)) {
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Authentication required' 
-    });
-  }
-  
-  req.sessionToken = token;
-  next();
-}
-
-// Authentication endpoint
-app.post('/api/auth/login', (req, res) => {
-  const { username, password } = req.body;
-
-  // Check if auth is required
-  if (!AUTH_REQUIRED) {
-    return res.json({ 
-      success: true, 
-      message: 'Authentication not required',
-      token: 'no-auth-required'
-    });
-  }
-
-  // Validate credentials are configured
-  if (!AUTH_USERNAME || !AUTH_PASSWORD) {
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Server authentication not properly configured' 
-    });
-  }
-
-  // Validate input
-  if (!username || !password) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'Username and password are required' 
-    });
-  }
-
-  // Check credentials
-  if (username === AUTH_USERNAME && password === AUTH_PASSWORD) {
-    const token = generateSessionToken();
-    sessions.add(token);
-    
-    res.json({ 
-      success: true, 
-      message: 'Authentication successful',
-      token 
-    });
-  } else {
-    res.status(401).json({ 
-      success: false, 
-      message: 'Invalid username or password' 
-    });
-  }
-});
-
-// Logout endpoint
-app.post('/api/auth/logout', (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '');
-  if (token) {
-    sessions.delete(token);
-  }
-  res.json({ success: true, message: 'Logged out successfully' });
-});
-
-  // Create WebSocket server
-  const wss = new WebSocketServer({ server });
-
-  // Initialize services
-  const shellManager = new ShellManager();
-  const authService = new AuthService();
-
-
-  // Setup REST routes
-  setupRestRoutes(app, { shellManager, authService });
-
-  // Setup WebSocket handlers
-  setupWebSocketHandlers(wss, { shellManager, authService });
 
   // Health check endpoint
   app.get('/health', (req, res) => {
